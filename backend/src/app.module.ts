@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { CatastroModule } from './catastro/catastro.module';
+import { TributarioModule } from './tributario/tributario.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CatastroModule } from './catastro/catastro.module';
     }),
     AuthModule,
     CatastroModule,
+    TributarioModule,
   ],
   controllers: [AppController],
   providers: [AppService],
