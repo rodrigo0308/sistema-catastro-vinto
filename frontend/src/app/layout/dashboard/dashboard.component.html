@@ -1,0 +1,36 @@
+<div class="dashboard-container">
+    <!-- Menú Lateral (Sidebar) -->
+    <aside class="sidebar">
+    <div class="sidebar-header">
+        <h3>GAM Vinto</h3>
+        <p>Panel de Control</p>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a routerLink="/dashboard/catastro" routerLinkActive="active" class="nav-link">
+            Módulo de Catastro
+        </a>
+        <a routerLink="/dashboard/recaudacion" routerLinkActive="active" class="nav-link">
+            Módulo Tributario
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <button (click)="cerrarSesion()" class="btn-logout">
+        Cerrar Sesión
+        </button>
+    </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="main-content">
+    <header class="topbar">
+        <h2>Sistema Web de Recaudación y Catastro</h2>
+    </header>
+    
+    <div class="content-area">
+        <!-- Aquí cargarán las pantallas internas -->
+        <router-outlet></router-outlet>
+    </div>
+    </main>
+</div> 
