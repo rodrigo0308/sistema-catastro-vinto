@@ -21,10 +21,15 @@ export class CatastroComponent implements AfterViewInit {
   }
 
   private iniciarMapa(): void {
-    this.map = L.map('mapa-catastro').setView([-17.398, -66.315], 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
+    // Inicializamos el mapa centrado en Vinto con restricciones de zoom
+    this.map = L.map('mapa-catastro', {
+      minZoom: 14,
+      maxZoom: 18 // Evita que el usuario haga un zoom excesivo que rompa el mapa
+    }).setView([-17.398, -66.315], 16);
+
+    // NUEVO: Capa Satelital de Alta Resolución (ESRI)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
     }).addTo(this.map);
   }
 
@@ -37,12 +42,17 @@ export class CatastroComponent implements AfterViewInit {
             let colorHex = '#2ecc71'; // Verde (Libre)
             if (estado === 'Ocupado') colorHex = '#e74c3c'; // Rojo
             if (estado === 'Mora') colorHex = '#f39c12'; // Naranja
-            return { color: colorHex, weight: 2, fillOpacity: 0.6 };
+            
+            // Le damos un borde más grueso (weight) para que resalte sobre el satélite
+            return { color: colorHex, weight: 3, fillOpacity: 0.7 };
           },
           onEachFeature: (feature, layer) => {
             layer.bindPopup(`
-              <b>Lote:</b> ${feature.properties.codigo_lote}<br>
-              <b>Estado:</b> ${feature.properties.estado}
+              <div style="font-family: Arial; text-align: center;">
+                <b style="font-size: 1.1em; color: #2c3e50;">Lote: ${feature.properties.codigo_lote}</b><br>
+                <span style="color: #7f8c8d;">Estado actual:</span><br>
+                <b style="color: ${feature.properties.estado === 'Mora' ? '#f39c12' : '#2ecc71'};">${feature.properties.estado}</b>
+              </div>
             `);
           }
         }).addTo(this.map);
