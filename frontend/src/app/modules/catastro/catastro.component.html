@@ -1,9 +1,17 @@
 <div class="map-container">
     <div class="map-header">
-    <h3>Geovisor de Catastro</h3>
-    <p>Visualización espacial de predios del GAM Vinto</p>
+        <h3>Geovisor de Catastro</h3>
+        <p>Visualización espacial de predios del GAM Vinto</p>
     </div>
-    
-    <!-- Contenedor donde Leaflet dibujará el mapa -->
+
+    <!-- Leyenda flotante -->
+    <div class="map-legend">
+        <h5>Simbología</h5>
+        <div class="legend-item"><span class="dot" style="background: #2ecc71;"></span> Libre</div>
+        <div class="legend-item"><span class="dot" style="background: #f39c12;"></span> En Mora</div>
+        <div class="legend-item"><span class="dot" style="background: #e74c3c;"></span> Ocupado</div>
+    </div>
+
+    <!-- Único contenedor donde Leaflet dibujará el mapa -->
     <div id="mapa-catastro"></div>
 </div>

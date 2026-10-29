@@ -31,3 +31,47 @@
     z-index: 1;
     /* Previene superposiciones con otros menús */
 }
+.map-container {
+  position: relative; /* Necesario para que la leyenda flote dentro de este contenedor */
+}
+
+.map-legend {
+  position: absolute;
+  top: 90px;
+  right: 30px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  z-index: 1000; /* Para que flote sobre Leaflet */
+  border-left: 4px solid #3498db;
+}
+
+.map-legend h5 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 0.95em;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  color: #34495e;
+}
+
+.legend-item:last-child {
+  margin-bottom: 0;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 10px;
+  border: 1px solid rgba(0,0,0,0.1);
+}
