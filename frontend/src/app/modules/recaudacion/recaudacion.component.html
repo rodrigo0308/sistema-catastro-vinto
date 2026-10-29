@@ -1,0 +1,52 @@
+<div class="recaudacion-container">
+    <div class="header">
+        <h3>Módulo Tributario y Recaudaciones</h3>
+        <p>Motor automatizado de liquidación de deudas y generación de estados de cuenta</p>
+    </div>
+
+    <div class="grid-calculadora">
+        <!-- Panel Izquierdo: Formulario de Ingreso -->
+        <div class="card form-card">
+            <h4>Parámetros de Arrendamiento</h4>
+
+            <div class="form-group">
+                <label>Costo Base del Nicho (Bs.)</label>
+                <input type="number" [(ngModel)]="costoBase" class="form-control" placeholder="Ej: 500">
+            </div>
+
+            <div class="form-group">
+                <label>Meses de Retraso (Mora)</label>
+                <input type="number" [(ngModel)]="mesesRetraso" class="form-control" placeholder="Ej: 3">
+            </div>
+
+            <div *ngIf="error" class="error-msg">{{ error }}</div>
+
+            <button class="btn-calcular" (click)="calcularLiquidacion()" [disabled]="cargando">
+                {{ cargando ? 'Procesando Cálculo...' : 'Calcular Liquidación' }}
+            </button>
+        </div>
+
+        <!-- Panel Derecho: Estado de Cuenta (Solo se muestra si hay respuesta del backend) -->
+        <div class="card result-card" *ngIf="resultado">
+            <div class="ticket-header">
+                <h4>Estado de Cuenta Generado</h4>
+                <span class="badge">Válido para Caja</span>
+            </div>
+
+            <ul class="result-list">
+                <li><span>Costo Base:</span> <b>{{ resultado.costo_base_bs }} Bs.</b></li>
+                <li><span>Meses en Mora:</span> <b>{{ resultado.meses_retraso }}</b></li>
+                <li><span>Multa Aplicada:</span> <b class="text-warning">{{ resultado.multa_bs }} Bs.</b></li>
+                <li><span>Interés Generado:</span> <b class="text-warning">{{ resultado.interes_bs }} Bs.</b></li>
+                <hr>
+                <li class="total"><span>Total a Pagar (Bs):</span> <b>{{ resultado.total_pagar_bs }} Bs.</b></li>
+                <li class="total-ufv"><span>Conversión UFV:</span> <b>{{ resultado.total_pagar_ufv }} UFV</b></li>
+            </ul>
+
+            <div class="info-param">
+                <small>Parámetros aplicados por el sistema: UFV {{ resultado.parametros_aplicados.ufv }} (Gestión {{
+                    resultado.parametros_aplicados.gestion }})</small>
+            </div>
+        </div>
+    </div>
+</div>
