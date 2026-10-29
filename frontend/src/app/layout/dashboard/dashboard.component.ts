@@ -10,11 +10,16 @@ import { RouterModule, Router } from '@angular/router';
   styleUrl: './dashboard.component.css'
 })
 export class DashboardComponent {
+  isCollapsed = false;
+
   constructor(private router: Router) {}
 
-  cerrarSesion() {
-    // Aquí luego borraremos el token JWT
-    alert('Cerrando sesión...');
+  toggleSidebar(): void {
+    this.isCollapsed = !this.isCollapsed;
+  }
+
+  cerrarSesion(): void {
+    localStorage.removeItem('token');
     this.router.navigate(['/login']);
   }
 }
