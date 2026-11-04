@@ -1,14 +1,27 @@
-/* Capa Superior Institucional */
+/* Layout Principal */
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header Superior Institucional */
 .top-header {
     background-color: #ffffff;
-    color: #1e2b37;
+    color: #1a252f;
     padding: 10px 25px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 3px solid #3498db;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-bottom: 2px solid #3498db;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     z-index: 1010;
+    height: 65px;
+    box-sizing: border-box;
 }
 
 .brand-section {
@@ -18,7 +31,7 @@
 }
 
 .header-logo {
-    height: 52px;
+    height: 46px;
     width: auto;
     object-fit: contain;
 }
@@ -29,18 +42,193 @@
 }
 
 .brand-title {
-    font-size: 1.3em;
-    font-weight: 900;
+    font-size: 1.2em;
+    font-weight: 800;
     color: #1a252f;
     margin: 0;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    font-family: 'Arial Black', 'Segoe UI', sans-serif;
 }
 
 .brand-subtitle {
     font-size: 0.85em;
     color: #7f8c8d;
     font-weight: 600;
-    letter-spacing: 0.3px;
+}
+
+/* Estructura del Cuerpo */
+.dashboard-body {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 65px);
+    overflow: hidden;
+}
+
+/* Sidebar en Tonos Claros */
+.sidebar {
+    width: 250px;
+    background-color: #ffffff;
+    color: #2c3e50;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: 1px solid #e2e8f0;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.02);
+    z-index: 1000;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+/* Encabezado del Menú con Botón Hamburguesa Neutro */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.toggle-btn {
+    background-color: #ffffff;
+    border: 1.5px solid #bdc3c7;
+    color: #2c3e50;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.toggle-btn:hover {
+    background-color: #f8f9fa;
+    border-color: #3498db;
+    color: #3498db;
+}
+
+.menu-label {
+    font-size: 0.85em;
+    font-weight: 700;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+/* Ítems del Menú de Navegación */
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 15px 10px;
+    flex: 1;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 11px 14px;
+    color: #4a5568;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 0.95em;
+    border-left: 4px solid transparent;
+}
+
+.nav-item:hover {
+    background-color: #f7fafc;
+    color: #2b6cb0;
+    border-left-color: #90cdf4;
+}
+
+.nav-item .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #718096;
+    transition: color 0.2s ease-in-out;
+}
+
+.nav-item:hover .icon {
+    color: #2b6cb0;
+}
+
+/* Estado Activo (Módulo Seleccionado) */
+.nav-item.active {
+    background-color: #ebf8ff;
+    color: #2b6cb0;
+    font-weight: 700;
+    border-left-color: #3182ce;
+}
+
+.nav-item.active .icon {
+    color: #3182ce !important;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 11px 0;
+}
+
+/* Footer / Botón de Cierre de Sesión */
+.sidebar-footer {
+    padding: 14px 10px;
+    border-top: 1px solid #edf2f7;
+    background-color: #ffffff;
+}
+
+.btn-logout {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background-color: #fff5f5;
+    color: #c53030;
+    border: 1px solid #feb2b2;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-logout:hover {
+    background-color: #e53e3e;
+    color: #ffffff;
+    border-color: #e53e3e;
+}
+
+.btn-logout .icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar.collapsed .btn-logout {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+/* Área de Contenido */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: #f8f9fa;
+}
+
+.content-body {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
 }
