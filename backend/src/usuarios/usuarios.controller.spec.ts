@@ -8,13 +8,24 @@ describe('UsuariosController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsuariosController],
-      providers: [UsuariosService],
+      providers: [
+        {
+          provide: UsuariosService,
+          useValue: {
+            create: jest.fn(),
+            findAll: jest.fn(),
+            findOne: jest.fn(),
+            update: jest.fn(),
+            remove: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<UsuariosController>(UsuariosController);
   });
 
-  it('should be defined', () => {
+  it('debería estar definido', () => {
     expect(controller).toBeDefined();
   });
 });

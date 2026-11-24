@@ -16,8 +16,10 @@
     <input id="password" type="password" formControlName="contrasena" placeholder="Tu contraseña secreta">
         </div>
 
-        <button type="submit" [disabled]="loginForm.invalid" class="btn-login">
-        Ingresar al Sistema
+        <div class="error-login" *ngIf="error">{{ error }}</div>
+
+        <button type="submit" [disabled]="loginForm.invalid || cargando" class="btn-login">
+        {{ cargando ? 'Verificando credenciales...' : 'Ingresar al Sistema' }}
         </button>
     </form>
     </div>

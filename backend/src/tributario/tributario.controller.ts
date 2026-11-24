@@ -1,12 +1,14 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { TributarioService } from './tributario.service';
 
 @Controller('tributario')
 export class TributarioController {
-    constructor(private readonly tributarioService: TributarioService) {}
+  constructor(private readonly tributarioService: TributarioService) {}
 
-    @Post('liquidar')
-    calcularDeuda(@Body() datos: { costoBase: number; mesesRetraso: number }) {
+  @UseGuards(AuthGuard('jwt'))
+  @Post('liquidar')
+  calcularDeuda(@Body() datos: { costoBase: number; mesesRetraso: number }) {
     return this.tributarioService.calcularLiquidacion(datos.costoBase, datos.mesesRetraso);
-    }
+  }
 }

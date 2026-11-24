@@ -52,6 +52,18 @@
     box-sizing: border-box;
 }
 
+.error-login {
+    background-color: #fdecea;
+    color: #c0392b;
+    border: 1px solid #f5b7b1;
+    border-radius: 5px;
+    padding: 8px 10px;
+    margin-bottom: 15px;
+    font-size: 0.85em;
+    text-align: center;
+    font-weight: 600;
+}
+
 .btn-login {
     width: 100%;
     padding: 12px;

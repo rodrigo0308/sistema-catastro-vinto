@@ -47,6 +47,10 @@
                 <small>Parámetros aplicados por el sistema: UFV {{ resultado.parametros_aplicados.ufv }} (Gestión {{
                     resultado.parametros_aplicados.gestion }})</small>
             </div>
+
+            <button class="btn-pdf" (click)="exportarPdf()" [disabled]="!resultado">
+                Exportar PDF
+            </button>
         </div>
     </div>
 </div>

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router';
+import { RouterModule } from '@angular/router';
+import { AuthService, UsuarioSesion } from '../../auth/auth.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -11,15 +12,17 @@ import { RouterModule, Router } from '@angular/router';
 })
 export class DashboardComponent {
   isCollapsed = false;
+  usuario: UsuarioSesion | null;
 
-  constructor(private router: Router) {}
+  constructor(private readonly authService: AuthService) {
+    this.usuario = this.authService.usuario;
+  }
 
   toggleSidebar(): void {
     this.isCollapsed = !this.isCollapsed;
   }
 
   cerrarSesion(): void {
-    localStorage.removeItem('token');
-    this.router.navigate(['/login']);
+    this.authService.cerrarSesion();
   }
 }
