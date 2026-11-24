@@ -11,7 +11,11 @@ describe('CatastroController', () => {
       providers: [
         {
           provide: CatastroService,
-          useValue: { obtenerMapaGeoJson: jest.fn() },
+          useValue: {
+            obtenerMapaGeoJson: jest.fn(),
+            obtenerNichosDeBloque: jest.fn(),
+            buscarPorApellido: jest.fn(),
+          },
         },
       ],
     }).compile();
