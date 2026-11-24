@@ -1,7 +1,52 @@
 <div class="map-container">
     <div class="map-header">
-        <h3>Geovisor de Catastro</h3>
-        <p>Visualización espacial de predios del GAM Vinto</p>
+        <div>
+            <h3>Geovisor de Catastro</h3>
+            <p>Visualización espacial de predios del GAM Vinto</p>
+        </div>
+    </div>
+
+    <!-- Buscador por apellido -->
+    <div class="buscador">
+        <div class="buscador-input">
+            <input
+                type="text"
+                [(ngModel)]="terminoBusqueda"
+                (keyup.enter)="buscar()"
+                placeholder="Buscar difunto por apellido..."
+                aria-label="Buscar difunto por apellido"
+            >
+            <button class="btn-buscar" (click)="buscar()" [disabled]="buscando">
+                {{ buscando ? 'Buscando...' : 'Buscar' }}
+            </button>
+            <button
+                class="btn-limpiar"
+                *ngIf="terminoBusqueda || resultados.length"
+                (click)="limpiarBusqueda()"
+                title="Limpiar búsqueda"
+            >&times;</button>
+        </div>
+
+        <div class="error-busqueda" *ngIf="errorBusqueda">{{ errorBusqueda }}</div>
+
+        <!-- Resultados -->
+        <ul class="resultados" *ngIf="resultados.length > 0">
+            <li *ngFor="let r of resultados">
+                <button type="button" (click)="seleccionarResultado(r)">
+                    <span class="resultado-bloque">{{ etiquetaResultado(r) }}</span>
+                    <span class="resultado-difunto">
+                        {{ r.nombre_difunto || r.apellido_difunto || 'Sin difunto registrado' }}
+                    </span>
+                    <span class="resultado-solicitante" *ngIf="r.solicitante">
+                        Solicitante: {{ r.solicitante }}
+                    </span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="sin-resultados" *ngIf="busquedaRealizada && resultados.length === 0">
+            No se encontraron difuntos con ese apellido o nombre.
+        </div>
     </div>
 
     <!-- Leyenda flotante -->
@@ -14,4 +59,60 @@
 
     <!-- Único contenedor donde Leaflet dibujará el mapa -->
     <div id="mapa-catastro"></div>
+
+    <!-- Panel lateral flotante tipo Excel -->
+    <aside class="panel-nichos" *ngIf="panelAbierto">
+        <div class="panel-header">
+            <div>
+                <h4>{{ panel?.bloque?.codigo_lote || 'Bloque' }}</h4>
+                <small>Distribución de nichos</small>
+            </div>
+            <button class="btn-cerrar" (click)="cerrarPanel()" title="Cerrar panel">&times;</button>
+        </div>
+
+        <div class="panel-body">
+            <div class="panel-estado" *ngIf="cargandoPanel">Cargando nichos...</div>
+            <div class="panel-error" *ngIf="errorPanel">{{ errorPanel }}</div>
+
+            <div class="grid-scroll" *ngIf="!cargandoPanel && !errorPanel && panel">
+                <table class="nichos-grid">
+                    <thead>
+                        <tr>
+                            <th class="esquina">F\\C</th>
+                            <th *ngFor="let columna of panel.columnas">{{ columna }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let fila of matriz">
+                            <th class="fila-header">{{ fila.fila }}</th>
+                            <td
+                                *ngFor="let nicho of fila.celdas"
+                                class="celda"
+                                [ngClass]="[claseEstado(nicho), esResaltado(nicho) ? 'resaltada' : '']"
+                                [title]="descripcionNicho(nicho)"
+                                (click)="seleccionarCelda(nicho)"
+                            >
+                                <span class="celda-letra">{{ letraEstado(nicho) }}</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Detalle de la celda seleccionada (útil también en pantallas táctiles) -->
+            <div class="detalle-celda" *ngIf="celdaSeleccionada as n">
+                <h5>
+                    Fila {{ n.fila }}, Columna {{ n.columna }}
+                    <span class="badge" [ngClass]="claseEstado(n)">{{ n.estado }}</span>
+                </h5>
+                <p><b>Difunto:</b> {{ n.nombre_difunto || n.apellido_difunto || 'Sin registro' }}</p>
+                <p><b>Solicitante:</b> {{ n.solicitante || 'Sin registro' }}</p>
+                <p><b>Resolución:</b> {{ n.resolucion || 'Sin registro' }}</p>
+            </div>
+
+            <p class="panel-vacio" *ngIf="!cargandoPanel && !errorPanel && panel && panel.nichos.length === 0">
+                Este bloque no tiene nichos registrados.
+            </p>
+        </div>
+    </aside>
 </div>
