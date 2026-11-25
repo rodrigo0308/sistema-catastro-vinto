@@ -174,12 +174,27 @@ async function cargarNichosBloque5B(client) {
   return NICHOS_BLOQUE_5B.length;
 }
 
+/** Registros de prueba de sprints anteriores que ya no deben aparecer. */
+const PREDIOS_OBSOLETOS = ['Nicho-A1', 'Nicho-B2'];
+
+/** Elimina los predios de prueba antiguos (sus nichos caen por ON DELETE CASCADE). */
+async function limpiarPrediosObsoletos(client) {
+  const { rowCount } = await client.query(
+    'DELETE FROM predio_nicho WHERE codigo_lote = ANY($1)',
+    [PREDIOS_OBSOLETOS],
+  );
+  return rowCount ?? 0;
+}
+
 async function main() {
   const client = new Client(DB);
   await client.connect();
 
   try {
     await asegurarTablaNichos(client);
+    await limpiarPrediosObsoletos(client).then((borrados) =>
+      console.log(`Predios de prueba eliminados: ${borrados}`),
+    );
     const bloques = await cargarBloques(client);
     const nichos = await cargarNichosBloque5B(client);
     console.log(`Predios cargados/actualizados: ${bloques}`);

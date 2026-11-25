@@ -2,9 +2,16 @@ import { Component, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import * as L from 'leaflet';
 
 const API_URL = 'http://localhost:3000';
+
+/** Perímetro general del cementerio extraído de Datos/cementerio_vinto.geojson. */
+const PERIMETRO_URL = 'assets/cementerio_perimetro.geojson';
+
+/** Paleta de la máscara exterior: oscurece todo lo que queda fuera del cementerio. */
+const MASCARA_COLOR = '#0f172a';
 
 type EstadoNicho = 'Libre' | 'Ocupado' | 'Mora';
 
@@ -69,15 +76,22 @@ export class CatastroComponent implements AfterViewInit {
 
   ngAfterViewInit(): void {
     this.iniciarMapa();
-    this.cargarPrediosEspaciales();
+    this.cargarCementerio();
   }
 
   private iniciarMapa(): void {
-    // Inicializamos el mapa centrado en Vinto con restricciones de zoom
+    // Inicializamos el mapa centrado en el cementerio con restricciones de zoom
     this.map = L.map('mapa-catastro', {
-      minZoom: 14,
-      maxZoom: 18, // Evita que el usuario haga un zoom excesivo que rompa el mapa
-    }).setView([-17.398, -66.315], 16);
+      minZoom: 17, // Mantiene el cementerio siempre a la vista
+      maxZoom: 20, // Permite acercarse lo suficiente como para leer los bloques
+    }).setView([-17.408, -66.3055], 19);
+
+    // Paneles: la máscara va sobre el satélite y bajo los bloques; el borde
+    // del perímetro va por encima de los bloques para que siempre se lea.
+    this.map.createPane('mascara-exterior');
+    this.map.getPane('mascara-exterior')!.style.zIndex = '350';
+    this.map.createPane('perimetro-borde');
+    this.map.getPane('perimetro-borde')!.style.zIndex = '420';
 
     // Capa Satelital de Alta Resolución (ESRI)
     L.tileLayer(
@@ -92,37 +106,117 @@ export class CatastroComponent implements AfterViewInit {
     this.map.on('click', () => this.cerrarPanel());
   }
 
-  private cargarPrediosEspaciales(): void {
-    this.http.get<any>(`${API_URL}/catastro/mapa`).subscribe({
-      next: (geojsonData) => {
-        this.capaBloques = L.geoJSON(geojsonData, {
-          style: (feature) => {
-            const estado = feature?.properties?.estado;
-            let colorHex = '#2ecc71'; // Verde (Libre)
-            if (estado === 'Ocupado') colorHex = '#e74c3c'; // Rojo
-            if (estado === 'Mora') colorHex = '#f39c12'; // Naranja
+  /**
+   * Dibuja el perímetro del cementerio, la máscara exterior y los bloques.
+   * Después encuadra el mapa con un fitBounds estricto sobre los bloques y
+   * limita la navegación al entorno del cementerio (maxBounds).
+   */
+  private cargarCementerio(): void {
+    forkJoin({
+      perimetro: this.http.get<any>(PERIMETRO_URL),
+      mapa: this.http.get<any>(`${API_URL}/catastro/mapa`),
+    }).subscribe({
+      next: ({ perimetro, mapa }) => {
+        const anilloPerimetro = this.dibujarPerimetroYMascara(perimetro);
+        this.dibujarBloques(mapa);
 
-            return { color: colorHex, weight: 3, fillOpacity: 0.45 };
-          },
-          onEachFeature: (feature, layer) => {
-            const properties = feature.properties ?? {};
+        // Encuadre estricto sobre los bloques del cementerio
+        const bounds = this.capaBloques?.getBounds();
+        if (bounds?.isValid()) {
+          this.map.fitBounds(bounds, { padding: [15, 15], maxZoom: 20 });
 
-            layer.bindTooltip(
-              `<b>${properties.codigo_lote ?? 'Bloque'}</b><br><small>Haz clic para ver los nichos</small>`,
-              { sticky: true },
-            );
-
-            layer.on('click', (evento: L.LeafletMouseEvent) => {
-              // Evita que el clic llegue al mapa y cierre el panel recién abierto
-              L.DomEvent.stopPropagation(evento);
-              this.abrirBloque(properties.id);
-            });
-          },
-        }).addTo(this.map);
+          // Evita que el usuario se aleje navegando por el resto de la ciudad
+          this.map.setMaxBounds(bounds.pad(0.75));
+        } else if (anilloPerimetro?.isValid()) {
+          this.map.fitBounds(anilloPerimetro, { padding: [15, 15], maxZoom: 20 });
+          this.map.setMaxBounds(anilloPerimetro.pad(0.75));
+        }
       },
       error: (err) =>
-        console.error('Error al conectar con PostGIS:', err),
+        console.error('Error al cargar el cementerio:', err),
     });
+  }
+
+  /**
+   * Borde amarillo/blanco del perímetro general y polígono mundial con hueco
+   * en dicho perímetro para oscurecer todo lo que queda fuera del cementerio.
+   * Devuelve los límites del perímetro para usarlos como encuadre de respaldo.
+   */
+  private dibujarPerimetroYMascara(geojson: any): L.LatLngBounds {
+    const feature = geojson?.features?.[0];
+    const anillo: number[][] = feature?.geometry?.coordinates?.[0] ?? [];
+    const hueco = anillo.map(([lng, lat]) => L.latLng(lat, lng));
+    const limites = L.latLngBounds(hueco);
+
+    if (hueco.length < 3) {
+      return limites;
+    }
+
+    // Máscara mundial con hueco: solo el cementerio queda iluminado
+    const mundo = [
+      L.latLng(85, -180),
+      L.latLng(85, 180),
+      L.latLng(-85, 180),
+      L.latLng(-85, -180),
+    ];
+
+    L.polygon([mundo, hueco], {
+      pane: 'mascara-exterior',
+      color: MASCARA_COLOR,
+      weight: 0,
+      fillColor: MASCARA_COLOR,
+      fillOpacity: 0.55,
+      interactive: false,
+    }).addTo(this.map);
+
+    // Halo blanco + borde amarillo: perímetro definido, sin relleno
+    L.polygon(hueco, {
+      pane: 'perimetro-borde',
+      color: '#ffffff',
+      weight: 8,
+      opacity: 0.55,
+      fill: false,
+      interactive: false,
+    }).addTo(this.map);
+
+    L.polygon(hueco, {
+      pane: 'perimetro-borde',
+      color: '#facc15',
+      weight: 3,
+      opacity: 1,
+      fill: false,
+      interactive: false,
+    }).addTo(this.map);
+
+    return limites;
+  }
+
+  /** Pinta los bloques del GeoJSON con el semáforo de estados. */
+  private dibujarBloques(geojsonData: any): void {
+    this.capaBloques = L.geoJSON(geojsonData, {
+      style: (feature) => {
+        const estado = feature?.properties?.estado;
+        let colorHex = '#2ecc71'; // Verde (Libre)
+        if (estado === 'Ocupado') colorHex = '#e74c3c'; // Rojo
+        if (estado === 'Mora') colorHex = '#f39c12'; // Naranja
+
+        return { color: colorHex, weight: 3, fillOpacity: 0.45 };
+      },
+      onEachFeature: (feature, layer) => {
+        const properties = feature.properties ?? {};
+
+        layer.bindTooltip(
+          `<b>${properties.codigo_lote ?? 'Bloque'}</b><br><small>Haz clic para ver los nichos</small>`,
+          { sticky: true },
+        );
+
+        layer.on('click', (evento: L.LeafletMouseEvent) => {
+          // Evita que el clic llegue al mapa y cierre el panel recién abierto
+          L.DomEvent.stopPropagation(evento);
+          this.abrirBloque(properties.id);
+        });
+      },
+    }).addTo(this.map);
   }
 
   /** Consulta los nichos de un bloque y abre la cuadrícula tipo Excel. */
@@ -284,7 +378,7 @@ export class CatastroComponent implements AfterViewInit {
 
     this.map.flyToBounds(bounds, {
       padding: [40, 40],
-      maxZoom: 18,
+      maxZoom: 20,
       duration: 0.8,
     });
 

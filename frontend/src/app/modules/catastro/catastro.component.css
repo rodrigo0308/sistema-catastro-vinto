@@ -140,8 +140,8 @@
 
 /* ---------- Mapa ---------- */
 #mapa-catastro {
-    height: 60vh;
-    min-height: 400px;
+    height: 75vh;
+    min-height: 520px;
     width: 100%;
     border-radius: 5px;
     border: 1px solid #bdc3c7;
