@@ -7,16 +7,38 @@
     <div class="grid-calculadora">
         <!-- Panel Izquierdo: Formulario de Ingreso -->
         <div class="card form-card">
-            <h4>Parámetros de Arrendamiento</h4>
+            <h4>Parámetros de Liquidación</h4>
 
             <div class="form-group">
-                <label>Costo Base del Nicho (Bs.)</label>
-                <input type="number" [(ngModel)]="costoBase" class="form-control" placeholder="Ej: 500">
+                <label>Concepto</label>
+                <select [(ngModel)]="concepto" class="form-control">
+                    <option *ngFor="let c of conceptos" [value]="c">{{ c }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Gestiones / Años a pagar</label>
+                <input type="number" min="1" step="1" [(ngModel)]="gestiones" class="form-control"
+                    placeholder="Ej: 1">
+            </div>
+
+            <div class="form-group">
+                <label>Tarifa Unitaria / Precio fijado (Bs.)</label>
+                <input type="number" min="0" step="0.01" [(ngModel)]="tarifaUnitaria" class="form-control"
+                    placeholder="Ej: 150">
+                <small class="help-text">Monto definido por recaudaciones según el trámite.</small>
             </div>
 
             <div class="form-group">
                 <label>Meses de Retraso (Mora)</label>
-                <input type="number" [(ngModel)]="mesesRetraso" class="form-control" placeholder="Ej: 3">
+                <input type="number" min="0" step="1" [(ngModel)]="mesesRetraso" class="form-control"
+                    placeholder="Ej: 3">
+            </div>
+
+            <div class="costo-preview" *ngIf="tarifaUnitaria && gestiones">
+                Costo base calculado:
+                <b>{{ (tarifaUnitaria || 0) * (gestiones || 0) }} Bs.</b>
+                <span>({{ tarifaUnitaria }} Bs. x {{ gestiones }} gestión(es))</span>
             </div>
 
             <div *ngIf="error" class="error-msg">{{ error }}</div>
@@ -34,6 +56,9 @@
             </div>
 
             <ul class="result-list">
+                <li><span>Concepto:</span> <b>{{ conceptoAplicado }}</b></li>
+                <li><span>Gestiones / Años:</span> <b>{{ gestionesAplicadas }}</b></li>
+                <li><span>Tarifa Unitaria:</span> <b>{{ tarifaAplicada }} Bs.</b></li>
                 <li><span>Costo Base:</span> <b>{{ resultado.costo_base_bs }} Bs.</b></li>
                 <li><span>Meses en Mora:</span> <b>{{ resultado.meses_retraso }}</b></li>
                 <li><span>Multa Aplicada:</span> <b class="text-warning">{{ resultado.multa_bs }} Bs.</b></li>

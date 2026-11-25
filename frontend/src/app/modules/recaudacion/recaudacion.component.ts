@@ -12,8 +12,22 @@ import { jsPDF } from 'jspdf';
   styleUrl: './recaudacion.component.css'
 })
 export class RecaudacionComponent {
-  costoBase: number | null = null;
-  mesesRetraso: number | null = null;
+  readonly conceptos = [
+    'Mantenimiento Anual de Mausoleo / Nicho',
+    'Arrendamiento de Nicho',
+    'Regularización de Mora'
+  ];
+
+  concepto: string = this.conceptos[0];
+  gestiones: number | null = 1;
+  tarifaUnitaria: number | null = null;
+  mesesRetraso: number | null = 0;
+
+  // Datos congelados al momento de calcular, para el ticket y el PDF
+  conceptoAplicado = '';
+  gestionesAplicadas = 1;
+  tarifaAplicada = 0;
+  costoBase = 0;
 
   resultado: any = null;
   cargando: boolean = false;
@@ -22,8 +36,16 @@ export class RecaudacionComponent {
   constructor(private http: HttpClient) {}
 
   calcularLiquidacion(): void {
-    if (!this.costoBase || this.costoBase <= 0) {
-      this.error = 'Por favor, ingrese un costo base válido mayor a 0.';
+    const tarifa = Number(this.tarifaUnitaria);
+    const gestiones = Math.trunc(Number(this.gestiones));
+
+    if (!Number.isFinite(tarifa) || tarifa <= 0) {
+      this.error = 'Por favor, ingrese una tarifa unitaria válida mayor a 0.';
+      return;
+    }
+
+    if (!Number.isFinite(gestiones) || gestiones < 1) {
+      this.error = 'Indique al menos 1 gestión (año) a pagar.';
       return;
     }
 
@@ -31,10 +53,16 @@ export class RecaudacionComponent {
     this.cargando = true;
     this.resultado = null;
 
-    // Preparamos el cuerpo de la petición exactamente como lo probaste en la consola de PowerShell
+    // El costo base es la tarifa fijada por el funcionario multiplicada por
+    // las gestiones (años) que se están cobrando
+    this.conceptoAplicado = this.concepto;
+    this.gestionesAplicadas = gestiones;
+    this.tarifaAplicada = tarifa;
+    this.costoBase = tarifa * gestiones;
+
     const body = {
       costoBase: this.costoBase,
-      mesesRetraso: this.mesesRetraso || 0
+      mesesRetraso: Number(this.mesesRetraso) || 0
     };
 
     // Consumimos el endpoint de tu Motor Tributario en el Backend
@@ -94,7 +122,10 @@ export class RecaudacionComponent {
 
     // Desglose tributario
     const filas: Array<[string, string]> = [
-      ['Costo base del nicho', this.formatear(r.costo_base_bs) + ' Bs.'],
+      ['Concepto', this.conceptoAplicado],
+      ['Gestiones / Años pagados', String(this.gestionesAplicadas)],
+      ['Tarifa unitaria', this.formatear(this.tarifaAplicada) + ' Bs.'],
+      ['Costo base (tarifa x gestiones)', this.formatear(r.costo_base_bs) + ' Bs.'],
       ['Meses de retraso (mora)', String(r.meses_retraso ?? 0)],
       ['Multa aplicada', this.formatear(r.multa_bs) + ' Bs.'],
       ['Interés generado', this.formatear(r.interes_bs) + ' Bs.']

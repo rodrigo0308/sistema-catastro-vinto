@@ -55,6 +55,29 @@ h4 {
     box-sizing: border-box;
 }
 
+.help-text {
+    display: block;
+    margin-top: 4px;
+    color: #7f8c8d;
+    font-size: 0.78em;
+}
+
+.costo-preview {
+    margin-bottom: 14px;
+    padding: 8px 10px;
+    background: #eaf4fc;
+    border-left: 3px solid #3498db;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: #2c3e50;
+}
+
+.costo-preview span {
+    display: block;
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
 .btn-calcular {
     width: 100%;
     padding: 12px;
