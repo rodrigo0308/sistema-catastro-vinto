@@ -16,6 +16,16 @@
     font-size: 0.9em;
 }
 
+.aviso-registro {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    background: #ecfdf5;
+    border-left: 4px solid #22c55e;
+    border-radius: 6px;
+    color: #166534;
+    font-size: 0.88em;
+}
+
 .grid-calculadora {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -34,6 +44,16 @@ h4 {
     color: #34495e;
     border-bottom: 2px solid #3498db;
     padding-bottom: 10px;
+}
+
+h4:not(:first-child) {
+    margin-top: 22px;
+}
+
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 14px;
 }
 
 .form-group {
@@ -145,6 +165,20 @@ h4 {
     margin-top: 5px;
 }
 
+.ticket-seccion {
+    margin-bottom: 18px;
+}
+
+.ticket-seccion h5 {
+    margin: 0 0 8px;
+    color: #34495e;
+    font-size: 0.82em;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #dcdde1;
+    padding-bottom: 4px;
+}
+
 .result-list {
     list-style: none;
     padding: 0;
@@ -154,8 +188,14 @@ h4 {
 .result-list li {
     display: flex;
     justify-content: space-between;
+    gap: 12px;
     padding: 8px 0;
     border-bottom: 1px dashed #bdc3c7;
+    font-size: 0.92em;
+}
+
+.result-list li b {
+    text-align: right;
 }
 
 .text-warning {
@@ -194,6 +234,33 @@ h4 {
     border-radius: 4px;
 }
 
+/* Bloque de firmas del ticket */
+.firmas-ticket {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+    margin-top: 32px;
+}
+
+.firma {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.linea-firma {
+    display: block;
+    width: 100%;
+    border-top: 1px solid #2c3e50;
+    margin-bottom: 6px;
+}
+
+.firma small {
+    color: #2c3e50;
+    font-size: 0.76em;
+    text-align: center;
+}
+
 .btn-pdf {
     width: 100%;
     margin-top: 18px;
@@ -215,4 +282,14 @@ h4 {
 .btn-pdf:disabled {
     background-color: #95a5a6;
     cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+    .grid-calculadora {
+        grid-template-columns: 1fr;
+    }
+
+    .form-grid-2 {
+        grid-template-columns: 1fr;
+    }
 }

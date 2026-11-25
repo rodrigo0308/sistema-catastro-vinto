@@ -1,12 +1,45 @@
 <div class="recaudacion-container">
     <div class="header">
         <h3>Módulo Tributario y Recaudaciones</h3>
-        <p>Motor automatizado de liquidación de deudas y generación de estados de cuenta</p>
+        <p>Motor automatizado de liquidación de deudas, contratos y generación de estados de cuenta</p>
+    </div>
+
+    <div class="aviso-registro" *ngIf="desdeRegistro">
+        Datos cargados desde el Registro de Difuntos. Verifique el plazo, el monto acordado y complete el titular.
     </div>
 
     <div class="grid-calculadora">
         <!-- Panel Izquierdo: Formulario de Ingreso -->
         <div class="card form-card">
+            <h4>Datos del Contrato</h4>
+
+            <div class="form-group">
+                <label for="titular">Titular / Solicitante</label>
+                <input id="titular" name="titular" type="text" class="form-control" [(ngModel)]="titular"
+                    placeholder="Nombre del familiar responsable">
+            </div>
+
+            <div class="form-group">
+                <label for="difunto">Difunto</label>
+                <input id="difunto" name="difunto" type="text" class="form-control" [(ngModel)]="difunto"
+                    placeholder="Nombre completo del difunto">
+            </div>
+
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label for="ubicacion">Ubicación</label>
+                    <input id="ubicacion" name="ubicacion" type="text" class="form-control" [(ngModel)]="ubicacion"
+                        placeholder="Bloque - Fila / Columna">
+                </div>
+
+                <div class="form-group">
+                    <label for="tipoEspacio">Tipo de Espacio</label>
+                    <select id="tipoEspacio" name="tipoEspacio" class="form-control" [(ngModel)]="tipoEspacio">
+                        <option *ngFor="let tipo of tiposEspacio" [value]="tipo">{{ tipo }}</option>
+                    </select>
+                </div>
+            </div>
+
             <h4>Parámetros de Liquidación</h4>
 
             <div class="form-group">
@@ -17,18 +50,28 @@
                 <small class="help-text">{{ notaConcepto }}</small>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" *ngIf="modoActual !== 'contrato'">
                 <label>Gestiones / Años a pagar</label>
                 <input type="number" min="1" step="1" [(ngModel)]="gestiones" class="form-control"
                     placeholder="Ej: 1">
                 <small class="help-text">Editable: ajústelo si el caso tiene una excepción.</small>
             </div>
 
+            <div class="form-group" *ngIf="modoActual === 'contrato'">
+                <label>Años de Vigencia del Contrato</label>
+                <input type="number" min="1" step="1" [(ngModel)]="plazoAnios" class="form-control"
+                    placeholder="Ej: 2">
+                <small class="help-text">
+                    Dato informativo: el precio del contrato es global y no se multiplica por los años.
+                    <ng-container *ngIf="anioVencimiento">Vence el año {{ anioVencimiento }}.</ng-container>
+                </small>
+            </div>
+
             <div class="form-group">
-                <label>Tarifa Unitaria / Precio fijado (Bs.)</label>
+                <label>{{ modoActual === 'contrato' ? 'Precio / Monto del Contrato (Bs.)' : 'Tarifa Unitaria / Precio fijado (Bs.)' }}</label>
                 <input type="number" min="0" step="0.01" [(ngModel)]="tarifaUnitaria" class="form-control"
-                    placeholder="Ej: 60">
-                <small class="help-text">Monto definido por recaudaciones según el trámite.</small>
+                    placeholder="Ej: 320">
+                <small class="help-text">Monto libre definido por recaudaciones según el caso.</small>
             </div>
 
             <div class="form-group">
@@ -37,10 +80,16 @@
                     placeholder="Ej: 3">
             </div>
 
-            <div class="costo-preview" *ngIf="tarifaUnitaria && gestiones">
+            <div class="costo-preview" *ngIf="tarifaUnitaria">
                 Costo base calculado:
-                <b>{{ (tarifaUnitaria || 0) * (gestiones || 0) }} Bs.</b>
-                <span>({{ tarifaUnitaria }} Bs. x {{ gestiones }} gestión(es))</span>
+                <b>{{ costoPreview }} Bs.</b>
+                <span *ngIf="modoActual === 'contrato'">
+                    {{ tarifaUnitaria }} Bs. — monto global del contrato
+                    <ng-container *ngIf="plazoAnios">({{ plazoAnios }} años de vigencia)</ng-container>
+                </span>
+                <span *ngIf="modoActual !== 'contrato'">
+                    {{ tarifaUnitaria }} Bs. x {{ gestiones }} gestión(es)
+                </span>
             </div>
 
             <div *ngIf="error" class="error-msg">{{ error }}</div>
@@ -53,30 +102,58 @@
         <!-- Panel Derecho: Estado de Cuenta (Solo se muestra si hay respuesta del backend) -->
         <div class="card result-card" *ngIf="resultado">
             <div class="ticket-header">
-                <h4>Estado de Cuenta Generado</h4>
+                <h4>{{ esContratoAplicado ? 'Contrato y Orden de Pago' : 'Estado de Cuenta Generado' }}</h4>
                 <span class="badge">Válido para Caja</span>
             </div>
 
-            <ul class="result-list">
-                <li><span>Concepto:</span> <b>{{ conceptoAplicado }}</b></li>
-                <li><span>Gestiones / Años:</span> <b>{{ gestionesAplicadas }}</b></li>
-                <li><span>Tarifa Unitaria:</span> <b>{{ tarifaAplicada }} Bs.</b></li>
-                <li><span>Costo Base:</span> <b>{{ resultado.costo_base_bs }} Bs.</b></li>
-                <li><span>Meses en Mora:</span> <b>{{ resultado.meses_retraso }}</b></li>
-                <li><span>Multa Aplicada:</span> <b class="text-warning">{{ resultado.multa_bs }} Bs.</b></li>
-                <li><span>Interés Generado:</span> <b class="text-warning">{{ resultado.interes_bs }} Bs.</b></li>
-                <hr>
-                <li class="total"><span>Total a Pagar (Bs):</span> <b>{{ resultado.total_pagar_bs }} Bs.</b></li>
-                <li class="total-ufv"><span>Conversión UFV:</span> <b>{{ resultado.total_pagar_ufv }} UFV</b></li>
-            </ul>
+            <div class="ticket-seccion">
+                <h5>Datos del Contrato</h5>
+                <ul class="result-list">
+                    <li *ngIf="titularAplicado"><span>Titular / Solicitante:</span> <b>{{ titularAplicado }}</b></li>
+                    <li *ngIf="difuntoAplicado"><span>Difunto:</span> <b>{{ difuntoAplicado }}</b></li>
+                    <li *ngIf="ubicacionAplicada"><span>Ubicación:</span> <b>{{ ubicacionAplicada }}</b></li>
+                    <li><span>Tipo de Espacio:</span> <b>{{ tipoEspacioAplicado }}</b></li>
+                    <li><span>Plazo de Vigencia:</span> <b>{{ vigenciaAplicada }}</b></li>
+                    <li *ngIf="esContratoAplicado"><span>Monto del Contrato:</span> <b>{{ tarifaAplicada }} Bs.
+                            (global)</b></li>
+                </ul>
+            </div>
+
+            <div class="ticket-seccion">
+                <h5>Liquidación Tributaria</h5>
+                <ul class="result-list">
+                    <li><span>Concepto:</span> <b>{{ conceptoAplicado }}</b></li>
+                    <li><span>{{ esContratoAplicado ? 'Años de Vigencia:' : 'Gestiones / Años:' }}</span> <b>{{
+                            esContratoAplicado ? (plazoAnios || 1) : gestionesAplicadas }}</b></li>
+                    <li><span>Tarifa / Precio fijado:</span> <b>{{ tarifaAplicada }} Bs.</b></li>
+                    <li><span>Costo Base:</span> <b>{{ resultado.costo_base_bs }} Bs.</b></li>
+                    <li><span>Meses en Mora:</span> <b>{{ resultado.meses_retraso }}</b></li>
+                    <li><span>Multa Aplicada:</span> <b class="text-warning">{{ resultado.multa_bs }} Bs.</b></li>
+                    <li><span>Interés Generado:</span> <b class="text-warning">{{ resultado.interes_bs }} Bs.</b></li>
+                    <hr>
+                    <li class="total"><span>Total a Pagar (Bs):</span> <b>{{ resultado.total_pagar_bs }} Bs.</b></li>
+                    <li class="total-ufv"><span>Conversión UFV:</span> <b>{{ resultado.total_pagar_ufv }} UFV</b></li>
+                </ul>
+            </div>
 
             <div class="info-param">
                 <small>Parámetros aplicados por el sistema: UFV {{ resultado.parametros_aplicados.ufv }} (Gestión {{
                     resultado.parametros_aplicados.gestion }})</small>
             </div>
 
+            <div class="firmas-ticket">
+                <div class="firma">
+                    <span class="linea-firma"></span>
+                    <small>Funcionario de Recaudaciones</small>
+                </div>
+                <div class="firma">
+                    <span class="linea-firma"></span>
+                    <small>Solicitante / Titular</small>
+                </div>
+            </div>
+
             <button class="btn-pdf" (click)="exportarPdf()" [disabled]="!resultado">
-                Exportar PDF
+                {{ esContratoAplicado ? 'Exportar Contrato PDF' : 'Exportar PDF' }}
             </button>
         </div>
     </div>
