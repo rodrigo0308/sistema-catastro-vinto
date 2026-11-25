@@ -2,6 +2,7 @@ import { Component, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import {
   Observable,
   Subject,
@@ -112,7 +113,10 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
   errorBusqueda = '';
   busquedaRealizada = false;
 
-  constructor(private readonly http: HttpClient) {
+  constructor(
+    private readonly http: HttpClient,
+    private readonly router: Router,
+  ) {
     // Búsqueda instantánea: 250 ms después de la última tecla y solo si el
     // término cambió. switchMap descarta respuestas obsoletas de consultas
     // anteriores. El botón "Buscar" consulta de inmediato (sin espera).
@@ -466,6 +470,23 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
 
   seleccionarCelda(nicho: Nicho | null): void {
     this.celdaSeleccionada = nicho;
+  }
+
+  /** Lleva al formulario de registro con el bloque y la celda elegidos. */
+  irARegistro(nicho: Nicho): void {
+    const bloque = this.panel?.bloque;
+    if (!bloque) {
+      return;
+    }
+
+    this.router.navigate(['/dashboard/registro'], {
+      queryParams: {
+        predioId: bloque.id,
+        bloque: bloque.codigo_lote,
+        fila: nicho.fila,
+        columna: nicho.columna,
+      },
+    });
   }
 
   esResaltado(nicho: Nicho | null): boolean {

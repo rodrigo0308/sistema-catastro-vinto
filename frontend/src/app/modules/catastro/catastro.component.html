@@ -128,6 +128,14 @@
                 <p><b>Difunto:</b> {{ n.nombre_difunto || n.apellido_difunto || 'Sin registro' }}</p>
                 <p><b>Solicitante:</b> {{ n.solicitante || 'Sin registro' }}</p>
                 <p><b>Resolución:</b> {{ n.resolucion || 'Sin registro' }}</p>
+
+                <button
+                    class="btn-registrar"
+                    *ngIf="n.estado === 'Libre'"
+                    (click)="irARegistro(n)"
+                >
+                    Registrar difunto en este nicho
+                </button>
             </div>
 
             <p class="panel-vacio" *ngIf="!cargandoPanel && !errorPanel && panel && panel.nichos.length === 0">
