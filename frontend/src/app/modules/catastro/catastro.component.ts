@@ -2,7 +2,7 @@ import { Component, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import {
   Observable,
   Subject,
@@ -116,6 +116,7 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
   constructor(
     private readonly http: HttpClient,
     private readonly router: Router,
+    private readonly route: ActivatedRoute,
   ) {
     // Búsqueda instantánea: 250 ms después de la última tecla y solo si el
     // término cambió. switchMap descarta respuestas obsoletas de consultas
@@ -141,6 +142,7 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     this.iniciarMapa();
     this.cargarCementerio();
+    this.abrirDesdeQueryParams();
   }
 
   ngOnDestroy(): void {
@@ -204,6 +206,11 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
           this.map.fitBounds(anilloPerimetro, { padding: [15, 15], maxZoom: 20 });
           this.map.setMaxBounds(anilloPerimetro.pad(0.75));
         }
+
+        // Si se llegó desde el registro, deja el bloque registrado a la vista
+        if (this.predioSeleccionado) {
+          this.enfocarBloque(this.predioSeleccionado);
+        }
       },
       error: (err) =>
         console.error('Error al cargar el cementerio:', err),
@@ -263,6 +270,46 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     }).addTo(this.map);
 
     return limites;
+  }
+
+  /**
+   * Abre el bloque y resalta el nicho indicado por queryParams, para que al
+   * volver del registro de difuntos se vea el nicho recién pintado.
+   */
+  private abrirDesdeQueryParams(): void {
+    this.route.queryParamMap
+      .pipe(takeUntil(this.destruir$))
+      .subscribe((params) => {
+        const predioId = params.get('predioId');
+        if (!predioId) {
+          return;
+        }
+
+        const fila = Number(params.get('fila'));
+        const columna = Number(params.get('columna'));
+        const resaltado =
+          fila > 0 && columna > 0 ? { fila, columna } : undefined;
+
+        this.abrirBloque(predioId, resaltado);
+        this.enfocarBloque(predioId);
+      });
+  }
+
+  /** Centra el mapa en el bloque indicado si ya está dibujado. */
+  private enfocarBloque(predioId: string): void {
+    const capas = this.capaBloques?.getLayers() ?? [];
+    const capa = capas.find(
+      (layer) => (layer as any)?.feature?.properties?.id === predioId,
+    ) as L.Polygon | undefined;
+    const bounds = capa?.getBounds();
+
+    if (bounds?.isValid()) {
+      this.map.flyToBounds(bounds, {
+        padding: [40, 40],
+        maxZoom: 20,
+        duration: 0.8,
+      });
+    }
   }
 
   /**

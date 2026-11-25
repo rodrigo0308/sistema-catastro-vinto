@@ -4,6 +4,7 @@ import { authGuard } from './auth/auth.guard';
 import { DashboardComponent } from './layout/dashboard/dashboard.component';
 import { CatastroComponent } from './modules/catastro/catastro.component';
 import { RecaudacionComponent } from './modules/recaudacion/recaudacion.component';
+import { RegistroDifuntosComponent } from './modules/registro/registro-difuntos.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -14,6 +15,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: 'catastro', component: CatastroComponent },
+      { path: 'registro', component: RegistroDifuntosComponent },
       { path: 'recaudacion', component: RecaudacionComponent },
     ],
   },

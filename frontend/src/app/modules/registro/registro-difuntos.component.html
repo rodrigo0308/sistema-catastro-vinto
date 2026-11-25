@@ -1,0 +1,117 @@
+<div class="registro-container">
+    <div class="header">
+        <h3>Registro de Difuntos</h3>
+        <p>Inscripción formal del difunto en un nicho o mausoleo del Cementerio Municipal</p>
+    </div>
+
+    <!-- Confirmación con acceso rápido al geovisor -->
+    <div class="alerta-exito" *ngIf="nichoRegistrado as nicho">
+        <div class="exito-texto">
+            <strong>Registro guardado correctamente.</strong>
+            <span>
+                {{ bloqueRegistrado || 'Bloque' }} - Fila {{ nicho.fila }}, Columna {{ nicho.columna }}.
+                El nicho ya figura como ocupado en el geovisor.
+            </span>
+        </div>
+        <div class="exito-acciones">
+            <button type="button" class="btn-geovisor" (click)="verEnGeovisor()">Ver en el Geovisor</button>
+            <button type="button" class="btn-secundario" (click)="registrarOtro()">Registrar otro</button>
+        </div>
+    </div>
+
+    <form class="card" (ngSubmit)="guardar()">
+        <h4>Ubicación del Nicho</h4>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="bloque">Bloque / Mausoleo</label>
+                <select id="bloque" name="bloque" [(ngModel)]="formulario.predio_id" class="form-control"
+                    [disabled]="cargandoBloques">
+                    <option value="" disabled>
+                        {{ cargandoBloques ? 'Cargando bloques...' : 'Seleccione un bloque' }}
+                    </option>
+                    <option *ngFor="let bloque of bloques" [value]="bloque.id">{{ bloque.codigo_lote }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="fila">Fila</label>
+                <input id="fila" name="fila" type="number" min="1" step="1" class="form-control"
+                    [(ngModel)]="formulario.fila">
+            </div>
+
+            <div class="form-group">
+                <label for="columna">Columna</label>
+                <input id="columna" name="columna" type="number" min="1" step="1" class="form-control"
+                    [(ngModel)]="formulario.columna">
+            </div>
+        </div>
+
+        <div class="error-bloques" *ngIf="errorBloques">{{ errorBloques }}</div>
+
+        <h4>Datos del Difunto</h4>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="apellido_paterno">Apellido Paterno</label>
+                <input id="apellido_paterno" name="apellido_paterno" type="text" class="form-control"
+                    [(ngModel)]="formulario.apellido_paterno" placeholder="Ej: Mamani" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="apellido_materno">Apellido Materno</label>
+                <input id="apellido_materno" name="apellido_materno" type="text" class="form-control"
+                    [(ngModel)]="formulario.apellido_materno" placeholder="Ej: Quispe" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="nombres">Nombres</label>
+                <input id="nombres" name="nombres" type="text" class="form-control" [(ngModel)]="formulario.nombres"
+                    placeholder="Ej: Juan Carlos" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="anio_defuncion">Año de Defunción / Entierro</label>
+                <input id="anio_defuncion" name="anio_defuncion" type="number" min="1900" max="2100" step="1"
+                    class="form-control" [(ngModel)]="formulario.anio_defuncion" placeholder="Ej: 2026">
+            </div>
+        </div>
+
+        <h4>Responsable del Trámite</h4>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="solicitante">Familiar / Solicitante responsable</label>
+                <input id="solicitante" name="solicitante" type="text" class="form-control"
+                    [(ngModel)]="formulario.solicitante" placeholder="Nombre completo del solicitante"
+                    autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="telefono_solicitante">Teléfono / Celular de contacto</label>
+                <input id="telefono_solicitante" name="telefono_solicitante" type="tel" class="form-control"
+                    [(ngModel)]="formulario.telefono_solicitante" placeholder="Ej: 71234567" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="resolucion">N° de Resolución Administrativa (RA.)</label>
+                <input id="resolucion" name="resolucion" type="text" class="form-control"
+                    [(ngModel)]="formulario.resolucion" placeholder="Ej: RA. 045/2026" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado" class="form-control" [(ngModel)]="formulario.estado">
+                    <option value="Ocupado">Ocupado</option>
+                    <option value="Mora">Mora</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="error-msg" *ngIf="error">{{ error }}</div>
+
+        <button type="submit" class="btn-guardar" [disabled]="guardando">
+            {{ guardando ? 'Guardando registro...' : 'Guardar Registro' }}
+        </button>
+    </form>
+</div>
