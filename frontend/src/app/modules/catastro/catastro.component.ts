@@ -37,6 +37,11 @@ interface Nicho {
   solicitante: string | null;
   resolucion: string | null;
   estado: EstadoNicho;
+  tipo_espacio: 'Nicho' | 'Mausoleo' | 'Camposanto' | null;
+  plazo_anios: number | null;
+  es_perpetuo: boolean;
+  anio_vencimiento: number | null;
+  monto_contrato_bs: number | null;
 }
 
 interface PanelBloque {
@@ -534,6 +539,61 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
         columna: nicho.columna,
       },
     });
+  }
+
+  /** Navega al Módulo Tributario con los datos de la celda ocupada o en mora. */
+  pagarMantenimiento(nicho: Nicho): void {
+    const bloque = this.panel?.bloque;
+    const codigo = bloque?.codigo_lote ?? 'Bloque';
+
+    this.router.navigate(['/dashboard/recaudacion'], {
+      queryParams: {
+        modo: 'mantenimiento',
+        difunto: this.nombreDifunto(nicho),
+        solicitante: nicho.solicitante ?? '',
+        ubicacion: `Bloque ${codigo} - Fila ${nicho.fila}, Columna ${nicho.columna}`,
+        tipoEspacio: nicho.tipo_espacio ?? 'Nicho',
+        esPerpetuo: nicho.es_perpetuo ? 'true' : 'false',
+        estado: nicho.estado,
+      },
+    });
+  }
+
+  /** Nombre completo del difunto para ticket, PDF y queryParams. */
+  nombreDifunto(nicho: Nicho | null): string {
+    if (!nicho) {
+      return '';
+    }
+    return (
+      [nicho.nombre_difunto, nicho.apellido_difunto]
+        .filter(Boolean)
+        .join(' ')
+        .trim() || 'Sin registro'
+    );
+  }
+
+  /** Régimen del espacio: perpetuo, plazo en años y año de vencimiento. */
+  regimenNicho(nicho: Nicho | null): string {
+    if (!nicho) {
+      return 'Sin registro';
+    }
+
+    if (nicho.es_perpetuo) {
+      return 'Perpetuo — sin vencimiento';
+    }
+
+    const plazo = Number(nicho.plazo_anios);
+    const vencimiento = Number(nicho.anio_vencimiento);
+    const partes: string[] = [];
+
+    if (Number.isFinite(plazo) && plazo > 0) {
+      partes.push(`${Math.trunc(plazo)} años`);
+    }
+    if (Number.isFinite(vencimiento) && vencimiento > 0) {
+      partes.push(`vence el año ${Math.trunc(vencimiento)}`);
+    }
+
+    return partes.length > 0 ? partes.join(' — ') : 'Sin plazo definido';
   }
 
   esResaltado(nicho: Nicho | null): boolean {

@@ -125,8 +125,10 @@
                     Fila {{ n.fila }}, Columna {{ n.columna }}
                     <span class="badge" [ngClass]="claseEstado(n)">{{ n.estado }}</span>
                 </h5>
-                <p><b>Difunto:</b> {{ n.nombre_difunto || n.apellido_difunto || 'Sin registro' }}</p>
+                <p><b>Difunto:</b> {{ nombreDifunto(n) }}</p>
                 <p><b>Solicitante:</b> {{ n.solicitante || 'Sin registro' }}</p>
+                <p><b>Tipo de Espacio:</b> {{ n.tipo_espacio || 'Nicho' }}</p>
+                <p><b>Régimen / Vencimiento:</b> {{ regimenNicho(n) }}</p>
                 <p><b>Resolución:</b> {{ n.resolucion || 'Sin registro' }}</p>
 
                 <button
@@ -135,6 +137,14 @@
                     (click)="irARegistro(n)"
                 >
                     Registrar difunto en este nicho
+                </button>
+
+                <button
+                    class="btn-mantenimiento"
+                    *ngIf="n.estado === 'Ocupado' || n.estado === 'Mora'"
+                    (click)="pagarMantenimiento(n)"
+                >
+                    Pagar Mantenimiento / Regularizar
                 </button>
             </div>
 

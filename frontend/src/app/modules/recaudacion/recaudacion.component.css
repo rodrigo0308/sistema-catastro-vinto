@@ -26,6 +26,25 @@
     font-size: 0.88em;
 }
 
+/* Resalta el campo de gestiones cuando el cobro viene del Geovisor. */
+.campo-mantenimiento {
+    padding: 10px 12px;
+    background: #fffbeb;
+    border: 1px solid #facc15;
+    border-radius: 6px;
+    animation: pulso-mantenimiento 1.4s ease-in-out 2;
+}
+
+.campo-mantenimiento .form-control:focus {
+    outline: 2px solid #eab308;
+    outline-offset: 1px;
+}
+
+@keyframes pulso-mantenimiento {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(234, 179, 8, 0.35); }
+}
+
 .grid-calculadora {
     display: grid;
     grid-template-columns: 1fr 1fr;

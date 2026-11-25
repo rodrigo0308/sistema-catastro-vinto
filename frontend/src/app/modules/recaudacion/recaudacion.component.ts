@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -23,7 +23,10 @@ interface ConceptoTarifario {
   templateUrl: './recaudacion.component.html',
   styleUrl: './recaudacion.component.css'
 })
-export class RecaudacionComponent {
+export class RecaudacionComponent implements AfterViewInit {
+  /** Campo de gestiones, para enfocarlo cuando se llega desde el Geovisor. */
+  @ViewChild('gestionesInput') gestionesInput?: ElementRef<HTMLInputElement>;
+
   // Tarifario referencial oficial del GAM Vinto (montos de caja)
   readonly tarifario: ConceptoTarifario[] = [
     {
@@ -97,6 +100,8 @@ export class RecaudacionComponent {
   esPerpetuo = false;
   anioVencimiento: number | null = null;
   desdeRegistro = false;
+  desdeMantenimiento = false;
+  estadoOrigen = '';
 
   // Datos congelados al momento de calcular, para el ticket y el PDF
   conceptoAplicado = '';
@@ -121,6 +126,19 @@ export class RecaudacionComponent {
     this.prellenarDesdeRegistro();
   }
 
+  /** Enfoca las gestiones cuando el cobro viene de una celda del Geovisor. */
+  ngAfterViewInit(): void {
+    if (!this.desdeMantenimiento) {
+      return;
+    }
+
+    // El campo vive dentro de un *ngIf: esperamos al siguiente ciclo.
+    setTimeout(() => {
+      this.gestionesInput?.nativeElement.focus();
+      this.gestionesInput?.nativeElement.select();
+    });
+  }
+
   get modoActual(): ModoConcepto {
     return (
       this.tarifario.find((c) => c.etiqueta === this.concepto)?.modo ?? 'libre'
@@ -138,6 +156,12 @@ export class RecaudacionComponent {
   /** Prellena el formulario con los queryParams enviados desde el registro. */
   private prellenarDesdeRegistro(): void {
     const params = this.route.snapshot.queryParamMap;
+
+    // Cobro de mantenimiento anual desde una celda Ocupada / En Mora.
+    if (params.get('modo') === 'mantenimiento') {
+      this.prellenarMantenimiento();
+      return;
+    }
 
     const difunto = params.get('difunto') ?? '';
     const titular = params.get('solicitante') ?? '';
@@ -200,6 +224,49 @@ export class RecaudacionComponent {
     if (monto !== null) {
       this.tarifaUnitaria = monto;
     }
+  }
+
+  /**
+   * Prellena el cobro de mantenimiento con los datos de la celda del Geovisor
+   * y elige la tarifa referencial según el tipo de espacio y el régimen.
+   */
+  private prellenarMantenimiento(): void {
+    const params = this.route.snapshot.queryParamMap;
+
+    const difunto = params.get('difunto') ?? '';
+    const titular = params.get('solicitante') ?? '';
+    const ubicacion = params.get('ubicacion') ?? '';
+    const tipoEspacio = params.get('tipoEspacio') ?? '';
+    const perpetuo = params.get('esPerpetuo') === 'true';
+
+    if (!difunto && !titular && !ubicacion) {
+      return;
+    }
+
+    this.desdeRegistro = true;
+    this.desdeMantenimiento = true;
+    this.estadoOrigen = params.get('estado') ?? '';
+    this.difunto = difunto;
+    this.titular = titular;
+    this.ubicacion = ubicacion;
+    if (tipoEspacio) {
+      this.tipoEspacio = tipoEspacio;
+    }
+    this.esPerpetuo = perpetuo;
+    this.plazoAnios = null;
+    this.anioVencimiento = null;
+
+    if (perpetuo) {
+      this.seleccionarConcepto('Mantenimiento Anual — Perpetuo (25 Bs./año)');
+    } else if (tipoEspacio === 'Mausoleo') {
+      this.seleccionarConcepto('Mantenimiento Anual — Mausoleo (60 Bs./año)');
+    } else {
+      // Nicho o camposanto: el encargado define la tarifa del mantenimiento.
+      this.seleccionarConcepto('Tarifa Personalizada / Otro Concepto');
+      this.tarifaUnitaria = null;
+    }
+
+    this.gestiones = 1;
   }
 
   // Autocompleta tarifa, gestiones y plazo según el concepto elegido; luego

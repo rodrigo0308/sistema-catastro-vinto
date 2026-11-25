@@ -4,7 +4,12 @@
         <p>Motor automatizado de liquidación de deudas, contratos y generación de estados de cuenta</p>
     </div>
 
-    <div class="aviso-registro" *ngIf="desdeRegistro">
+    <div class="aviso-registro" *ngIf="desdeMantenimiento">
+        Mantenimiento cargado desde el Geovisor (celda {{ estadoOrigen || 'Ocupado' }}).
+        Indique las gestiones / años a pagar y calcule la liquidación.
+    </div>
+
+    <div class="aviso-registro" *ngIf="desdeRegistro && !desdeMantenimiento">
         Datos cargados desde el Registro de Difuntos. Verifique el plazo, el monto acordado y complete el titular.
     </div>
 
@@ -50,9 +55,9 @@
                 <small class="help-text">{{ notaConcepto }}</small>
             </div>
 
-            <div class="form-group" *ngIf="modoActual !== 'contrato'">
+            <div class="form-group" [class.campo-mantenimiento]="desdeMantenimiento" *ngIf="modoActual !== 'contrato'">
                 <label>Gestiones / Años a pagar</label>
-                <input type="number" min="1" step="1" [(ngModel)]="gestiones" class="form-control"
+                <input #gestionesInput type="number" min="1" step="1" [(ngModel)]="gestiones" class="form-control"
                     placeholder="Ej: 1">
                 <small class="help-text">Editable: ajústelo si el caso tiene una excepción.</small>
             </div>
