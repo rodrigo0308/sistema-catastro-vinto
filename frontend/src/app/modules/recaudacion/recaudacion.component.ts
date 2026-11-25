@@ -4,6 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { jsPDF } from 'jspdf';
 
+interface ConceptoTarifario {
+  etiqueta: string;
+  tarifa: number | null;
+  gestiones: number;
+  referencia: string;
+}
+
 @Component({
   selector: 'app-recaudacion',
   standalone: true,
@@ -12,16 +19,49 @@ import { jsPDF } from 'jspdf';
   styleUrl: './recaudacion.component.css'
 })
 export class RecaudacionComponent {
-  readonly conceptos = [
-    'Mantenimiento Anual de Mausoleo / Nicho',
-    'Arrendamiento de Nicho',
-    'Regularización de Mora'
+  // Tarifario referencial oficial del GAM Vinto (montos de caja)
+  readonly tarifario: ConceptoTarifario[] = [
+    {
+      etiqueta: 'Mantenimiento Anual — Mausoleo (60 Bs./año)',
+      tarifa: 60,
+      gestiones: 1,
+      referencia: 'Tarifa referencial: 60 Bs. por año. El costo base es tarifa x gestiones.'
+    },
+    {
+      etiqueta: 'Mantenimiento Anual — Perpetuo (25 Bs./año)',
+      tarifa: 25,
+      gestiones: 1,
+      referencia: 'Tarifa referencial: 25 Bs. por año. El costo base es tarifa x gestiones.'
+    },
+    {
+      etiqueta: 'Contrato de Arrendamiento — 5 años (320 Bs.)',
+      tarifa: 320,
+      gestiones: 1,
+      referencia:
+        'Contrato con vigencia de 5 años: los 320 Bs. son el monto global del contrato (no se multiplican por los 5 años).'
+    },
+    {
+      etiqueta: 'Contrato de Arrendamiento — 30 años (4.000 Bs.)',
+      tarifa: 4000,
+      gestiones: 1,
+      referencia:
+        'Contrato con vigencia de 30 años: los 4.000 Bs. son el monto global del contrato (no se multiplican por los 30 años).'
+    },
+    {
+      etiqueta: 'Tarifa Personalizada / Otro Concepto',
+      tarifa: null,
+      gestiones: 1,
+      referencia: 'Ingrese libremente la tarifa y las gestiones según el caso atendido en caja.'
+    }
   ];
 
+  readonly conceptos = this.tarifario.map((c) => c.etiqueta);
+
   concepto: string = this.conceptos[0];
-  gestiones: number | null = 1;
-  tarifaUnitaria: number | null = null;
+  gestiones: number | null = this.tarifario[0].gestiones;
+  tarifaUnitaria: number | null = this.tarifario[0].tarifa;
   mesesRetraso: number | null = 0;
+  notaConcepto: string = this.tarifario[0].referencia;
 
   // Datos congelados al momento de calcular, para el ticket y el PDF
   conceptoAplicado = '';
@@ -34,6 +74,26 @@ export class RecaudacionComponent {
   error: string = '';
 
   constructor(private http: HttpClient) {}
+
+  // Autocompleta tarifa y gestiones según el concepto elegido; luego el
+  // funcionario puede seguir editando ambos campos si hay una excepción.
+  seleccionarConcepto(etiqueta: string): void {
+    this.concepto = etiqueta;
+
+    const item = this.tarifario.find((c) => c.etiqueta === etiqueta);
+    if (!item) {
+      return;
+    }
+
+    this.notaConcepto = item.referencia;
+
+    if (item.tarifa !== null) {
+      this.tarifaUnitaria = item.tarifa;
+      this.gestiones = item.gestiones;
+    }
+
+    this.error = '';
+  }
 
   calcularLiquidacion(): void {
     const tarifa = Number(this.tarifaUnitaria);

@@ -10,22 +10,24 @@
             <h4>Parámetros de Liquidación</h4>
 
             <div class="form-group">
-                <label>Concepto</label>
-                <select [(ngModel)]="concepto" class="form-control">
+                <label>Concepto / Tarifario Referencial</label>
+                <select [ngModel]="concepto" (ngModelChange)="seleccionarConcepto($event)" class="form-control">
                     <option *ngFor="let c of conceptos" [value]="c">{{ c }}</option>
                 </select>
+                <small class="help-text">{{ notaConcepto }}</small>
             </div>
 
             <div class="form-group">
                 <label>Gestiones / Años a pagar</label>
                 <input type="number" min="1" step="1" [(ngModel)]="gestiones" class="form-control"
                     placeholder="Ej: 1">
+                <small class="help-text">Editable: ajústelo si el caso tiene una excepción.</small>
             </div>
 
             <div class="form-group">
                 <label>Tarifa Unitaria / Precio fijado (Bs.)</label>
                 <input type="number" min="0" step="0.01" [(ngModel)]="tarifaUnitaria" class="form-control"
-                    placeholder="Ej: 150">
+                    placeholder="Ej: 60">
                 <small class="help-text">Monto definido por recaudaciones según el trámite.</small>
             </div>
 
