@@ -55,7 +55,7 @@
     <div class="map-legend">
         <h5>Simbología</h5>
         <div class="legend-item"><span class="dot" style="background: #2ecc71;"></span> Libre</div>
-        <div class="legend-item"><span class="dot" style="background: #f39c12;"></span> En Mora</div>
+        <div class="legend-item"><span class="dot" style="background: #facc15; border-color: #eab308;"></span> En Mora</div>
         <div class="legend-item"><span class="dot" style="background: #e74c3c;"></span> Ocupado</div>
     </div>
 
@@ -63,8 +63,26 @@
     <div id="mapa-catastro"></div>
 
     <!-- Panel lateral flotante tipo Excel -->
-    <aside class="panel-nichos" *ngIf="panelAbierto">
-        <div class="panel-header">
+    <aside
+        class="panel-nichos"
+        *ngIf="panelAbierto"
+        [class.arrastrando]="arrastrando"
+        [style.left.px]="panelPosicion?.left"
+        [style.top.px]="panelPosicion?.top"
+        [style.right]="panelPosicion ? 'auto' : null"
+        (mousedown)="$event.stopPropagation()"
+        (click)="$event.stopPropagation()"
+        (dblclick)="$event.stopPropagation()"
+        (pointerdown)="$event.stopPropagation()"
+        (wheel)="$event.stopPropagation()"
+    >
+        <div
+            class="panel-header"
+            (pointerdown)="iniciarArrastre($event)"
+            (pointermove)="moverArrastre($event)"
+            (pointerup)="terminarArrastre($event)"
+            (pointercancel)="terminarArrastre($event)"
+        >
             <div>
                 <h4>{{ panel?.bloque?.codigo_lote || 'Bloque' }}</h4>
                 <small>Distribución de nichos</small>

@@ -194,6 +194,7 @@
     position: absolute;
     top: 190px;
     right: 24px;
+    touch-action: none;
     width: 420px;
     max-width: calc(100% - 48px);
     max-height: 60vh;
@@ -214,6 +215,17 @@
     padding: 12px 16px;
     background: #2c3e50;
     color: #fff;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.panel-nichos.arrastrando .panel-header {
+    cursor: grabbing;
+}
+
+.panel-nichos.arrastrando {
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
 }
 
 .panel-header h4 {
@@ -317,8 +329,10 @@
 }
 
 .celda-mora {
-    background: #f39c12;
-    color: #4a2d00;
+    background: #facc15;
+    border-color: #eab308;
+    color: #1e293b;
+    font-weight: 700;
 }
 
 .celda-vacia {
@@ -377,8 +391,9 @@
 }
 
 .badge.celda-mora {
-    background: #f39c12;
-    color: #4a2d00;
+    background: #facc15;
+    border: 1px solid #eab308;
+    color: #1e293b;
 }
 
 @media (max-width: 640px) {

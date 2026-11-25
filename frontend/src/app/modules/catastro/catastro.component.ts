@@ -67,6 +67,23 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
   private map!: L.Map;
   private capaBloques?: L.GeoJSON;
 
+  // Estilos cartográficos de los bloques
+  private readonly ESTILO_BLOQUE: L.PathOptions = {
+    color: '#38bdf8',
+    weight: 2,
+    fillColor: '#0284c7',
+    fillOpacity: 0.28,
+  };
+
+  private readonly ESTILO_BLOQUE_RESALTADO: L.PathOptions = {
+    color: '#facc15',
+    weight: 3,
+    fillColor: '#0284c7',
+    fillOpacity: 0.45,
+  };
+
+  private predioSeleccionado = '';
+
   // Buscador reactivo: lo que se escribe y lo que dispara el botón "Buscar"
   private readonly termino$ = new Subject<string>();
   private readonly busquedaManual$ = new Subject<string>();
@@ -80,6 +97,13 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
   errorPanel = '';
   celdaSeleccionada: Nicho | null = null;
   nichoResaltado: { fila: number; columna: number } | null = null;
+
+  // Arrastre de la ventana flotante dentro del contenedor del mapa
+  arrastrando = false;
+  panelPosicion: { left: number; top: number } | null = null;
+  private arrastreOffset = { x: 0, y: 0 };
+  private contenedorArrastre: HTMLElement | null = null;
+  private panelArrastre: HTMLElement | null = null;
 
   // Buscador
   terminoBusqueda = '';
@@ -214,21 +238,22 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
       interactive: false,
     }).addTo(this.map);
 
-    // Halo blanco + borde amarillo: perímetro definido, sin relleno
+    // Contorno técnico: halo oscuro + línea blanca discontinua, sin relleno
     L.polygon(hueco, {
       pane: 'perimetro-borde',
-      color: '#ffffff',
-      weight: 8,
-      opacity: 0.55,
+      color: MASCARA_COLOR,
+      weight: 5,
+      opacity: 0.5,
       fill: false,
       interactive: false,
     }).addTo(this.map);
 
     L.polygon(hueco, {
       pane: 'perimetro-borde',
-      color: '#facc15',
-      weight: 3,
+      color: '#ffffff',
+      weight: 2.5,
       opacity: 1,
+      dashArray: '8, 6',
       fill: false,
       interactive: false,
     }).addTo(this.map);
@@ -236,24 +261,34 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     return limites;
   }
 
-  /** Pinta los bloques del GeoJSON con el semáforo de estados. */
+  /**
+   * Pinta los bloques con el azul institucional, que contrasta con la
+   * vegetación del satélite, y los resalta en amarillo al pasar el mouse
+   * o cuando su panel está abierto.
+   */
   private dibujarBloques(geojsonData: any): void {
     this.capaBloques = L.geoJSON(geojsonData, {
-      style: (feature) => {
-        const estado = feature?.properties?.estado;
-        let colorHex = '#2ecc71'; // Verde (Libre)
-        if (estado === 'Ocupado') colorHex = '#e74c3c'; // Rojo
-        if (estado === 'Mora') colorHex = '#f39c12'; // Naranja
-
-        return { color: colorHex, weight: 3, fillOpacity: 0.45 };
-      },
+      style: () => ({ ...this.ESTILO_BLOQUE }),
       onEachFeature: (feature, layer) => {
         const properties = feature.properties ?? {};
+        const capa = layer as L.Path;
 
         layer.bindTooltip(
           `<b>${properties.codigo_lote ?? 'Bloque'}</b><br><small>Haz clic para ver los nichos</small>`,
           { sticky: true },
         );
+
+        layer.on('mouseover', () => {
+          capa.setStyle(this.ESTILO_BLOQUE_RESALTADO);
+        });
+
+        layer.on('mouseout', () => {
+          capa.setStyle(
+            this.predioSeleccionado === properties.id
+              ? this.ESTILO_BLOQUE_RESALTADO
+              : this.ESTILO_BLOQUE,
+          );
+        });
 
         layer.on('click', (evento: L.LeafletMouseEvent) => {
           // Evita que el clic llegue al mapa y cierre el panel recién abierto
@@ -264,11 +299,25 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     }).addTo(this.map);
   }
 
+  /** Reaplica el resaltado amarillo solo al bloque actualmente seleccionado. */
+  private actualizarResaltadoBloques(): void {
+    this.capaBloques?.eachLayer((layer) => {
+      const id = (layer as any)?.feature?.properties?.id;
+      (layer as L.Path).setStyle(
+        id && id === this.predioSeleccionado
+          ? this.ESTILO_BLOQUE_RESALTADO
+          : this.ESTILO_BLOQUE,
+      );
+    });
+  }
+
   /** Consulta los nichos de un bloque y abre la cuadrícula tipo Excel. */
   abrirBloque(
     predioId: string,
     resaltado?: { fila: number; columna: number },
   ): void {
+    this.predioSeleccionado = predioId;
+    this.actualizarResaltadoBloques();
     this.panelAbierto = true;
     this.cargandoPanel = true;
     this.errorPanel = '';
@@ -313,6 +362,8 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
 
   /** Oculta limpiamente la ventana flotante y sus resaltados. */
   cerrarPanel(): void {
+    this.predioSeleccionado = '';
+    this.actualizarResaltadoBloques();
     this.panelAbierto = false;
     this.panel = null;
     this.matriz = [];
@@ -320,6 +371,97 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     this.nichoResaltado = null;
     this.errorPanel = '';
     this.cargandoPanel = false;
+  }
+
+  /** Inicia el arrastre de la ventana flotante desde su barra de título. */
+  iniciarArrastre(evento: PointerEvent): void {
+    if (evento.button !== 0) {
+      return;
+    }
+
+    const cabecera = evento.currentTarget as HTMLElement;
+    if ((evento.target as HTMLElement)?.closest('button')) {
+      return;
+    }
+
+    const panel = cabecera.closest('.panel-nichos') as HTMLElement | null;
+    const contenedor = cabecera.closest('.map-container') as HTMLElement | null;
+    if (!panel || !contenedor) {
+      return;
+    }
+
+    // El arrastre no debe llegar al mapa de Leaflet
+    evento.preventDefault();
+    evento.stopPropagation();
+
+    const panelRect = panel.getBoundingClientRect();
+    const contenedorRect = contenedor.getBoundingClientRect();
+
+    this.panelPosicion = {
+      left: panelRect.left - contenedorRect.left,
+      top: panelRect.top - contenedorRect.top,
+    };
+    this.arrastreOffset = {
+      x: evento.clientX - panelRect.left,
+      y: evento.clientY - panelRect.top,
+    };
+    this.contenedorArrastre = contenedor;
+    this.panelArrastre = panel;
+    this.arrastrando = true;
+    cabecera.setPointerCapture?.(evento.pointerId);
+  }
+
+  /** Mueve la ventana flotante, manteniéndola dentro del contenedor. */
+  moverArrastre(evento: PointerEvent): void {
+    if (
+      !this.arrastrando ||
+      !this.panelPosicion ||
+      !this.contenedorArrastre ||
+      !this.panelArrastre
+    ) {
+      return;
+    }
+
+    evento.preventDefault();
+    evento.stopPropagation();
+
+    const contenedorRect = this.contenedorArrastre.getBoundingClientRect();
+    const panelRect = this.panelArrastre.getBoundingClientRect();
+    const maxLeft = Math.max(0, contenedorRect.width - panelRect.width);
+    const maxTop = Math.max(0, contenedorRect.height - panelRect.height);
+
+    const left = Math.min(
+      Math.max(
+        0,
+        evento.clientX - contenedorRect.left - this.arrastreOffset.x,
+      ),
+      maxLeft,
+    );
+    const top = Math.min(
+      Math.max(
+        0,
+        evento.clientY - contenedorRect.top - this.arrastreOffset.y,
+      ),
+      maxTop,
+    );
+
+    this.panelPosicion = { left, top };
+  }
+
+  /** Suelta el puntero y deja la ventana en su nueva posición. */
+  terminarArrastre(evento: PointerEvent): void {
+    if (!this.arrastrando) {
+      return;
+    }
+
+    evento.stopPropagation();
+    (evento.currentTarget as HTMLElement).releasePointerCapture?.(
+      evento.pointerId,
+    );
+
+    this.arrastrando = false;
+    this.contenedorArrastre = null;
+    this.panelArrastre = null;
   }
 
   seleccionarCelda(nicho: Nicho | null): void {
