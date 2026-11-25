@@ -17,6 +17,15 @@ interface NichoRegistrado {
   columna: number;
 }
 
+type TipoEspacio = 'Nicho' | 'Mausoleo' | 'Camposanto';
+
+interface RegimenContrato {
+  etiqueta: string;
+  plazo: number | null;
+  monto: number | null;
+  perpetuo: boolean;
+}
+
 @Component({
   selector: 'app-registro-difuntos',
   standalone: true,
@@ -28,6 +37,36 @@ export class RegistroDifuntosComponent implements OnInit {
   bloques: Bloque[] = [];
   cargandoBloques = false;
   errorBloques = '';
+
+  readonly tiposEspacio: TipoEspacio[] = ['Nicho', 'Mausoleo', 'Camposanto'];
+
+  // Regímenes referenciales del GAM Vinto; el monto siempre es editable.
+  readonly regimenes: RegimenContrato[] = [
+    {
+      etiqueta: 'Temporal — 5 años (Ref. 320 Bs.)',
+      plazo: 5,
+      monto: 320,
+      perpetuo: false,
+    },
+    {
+      etiqueta: 'Temporal — 30 años (Ref. 4.000 Bs.)',
+      plazo: 30,
+      monto: 4000,
+      perpetuo: false,
+    },
+    {
+      etiqueta: 'Temporal — Plazo Personalizado (Años libres)',
+      plazo: null,
+      monto: null,
+      perpetuo: false,
+    },
+    {
+      etiqueta: 'Perpetuo (Mantenimiento anual)',
+      plazo: null,
+      monto: null,
+      perpetuo: true,
+    },
+  ];
 
   formulario = {
     predio_id: '',
@@ -41,6 +80,11 @@ export class RegistroDifuntosComponent implements OnInit {
     telefono_solicitante: '',
     resolucion: '',
     estado: 'Ocupado' as 'Ocupado' | 'Mora',
+    tipo_espacio: 'Nicho' as TipoEspacio,
+    regimen: this.regimenes[0].etiqueta,
+    plazo_anios: this.regimenes[0].plazo as number | null,
+    es_perpetuo: this.regimenes[0].perpetuo,
+    monto_contrato_bs: this.regimenes[0].monto as number | null,
   };
 
   guardando = false;
@@ -74,6 +118,30 @@ export class RegistroDifuntosComponent implements OnInit {
     this.cargarBloques();
   }
 
+  /** Indica si el régimen elegido exige escribir los años a mano. */
+  get esPlazoPersonalizado(): boolean {
+    return this.formulario.regimen.includes('Personalizado');
+  }
+
+  /** Vencimiento calculado a partir del año de defunción y el plazo. */
+  get anioVencimiento(): number | null {
+    if (this.formulario.es_perpetuo) {
+      return null;
+    }
+
+    const plazo = Number(this.formulario.plazo_anios);
+    const anio = Number(this.formulario.anio_defuncion);
+
+    if (!Number.isFinite(plazo) || plazo < 1) {
+      return null;
+    }
+    if (!Number.isFinite(anio) || anio < 1900) {
+      return null;
+    }
+
+    return Math.trunc(anio) + Math.trunc(plazo);
+  }
+
   private cargarBloques(): void {
     this.cargandoBloques = true;
     this.errorBloques = '';
@@ -90,6 +158,37 @@ export class RegistroDifuntosComponent implements OnInit {
         this.cargandoBloques = false;
       },
     });
+  }
+
+  /**
+   * Aplica el régimen elegido: fija el plazo y el monto referencial.
+   * En "Plazo Personalizado" y "Perpetuo" los años quedan a criterio del
+   * funcionario; el monto siempre se puede editar después.
+   */
+  seleccionarRegimen(etiqueta: string): void {
+    this.formulario.regimen = etiqueta;
+
+    const item = this.regimenes.find((r) => r.etiqueta === etiqueta);
+    if (!item) {
+      return;
+    }
+
+    this.formulario.es_perpetuo = item.perpetuo;
+
+    if (item.perpetuo) {
+      this.formulario.plazo_anios = null;
+      this.formulario.monto_contrato_bs = null;
+      return;
+    }
+
+    if (item.plazo !== null) {
+      this.formulario.plazo_anios = item.plazo;
+      this.formulario.monto_contrato_bs = item.monto;
+    } else {
+      this.formulario.plazo_anios = null;
+    }
+
+    this.error = '';
   }
 
   guardar(): void {
@@ -115,6 +214,20 @@ export class RegistroDifuntosComponent implements OnInit {
       this.error = 'Los nombres del difunto son obligatorios.';
       return;
     }
+    if (!this.formulario.es_perpetuo) {
+      const plazo = Number(this.formulario.plazo_anios);
+      if (!Number.isFinite(plazo) || plazo < 1) {
+        this.error = 'Indique el plazo del contrato en años (mayor a 0).';
+        return;
+      }
+    }
+    if (
+      this.formulario.monto_contrato_bs !== null &&
+      Number(this.formulario.monto_contrato_bs) < 0
+    ) {
+      this.error = 'El monto del contrato no puede ser negativo.';
+      return;
+    }
 
     const body = {
       predio_id: this.formulario.predio_id,
@@ -131,6 +244,15 @@ export class RegistroDifuntosComponent implements OnInit {
         this.formulario.telefono_solicitante.trim() || undefined,
       resolucion: this.formulario.resolucion.trim() || undefined,
       estado: this.formulario.estado,
+      tipo_espacio: this.formulario.tipo_espacio,
+      plazo_anios: this.formulario.es_perpetuo
+        ? undefined
+        : Number(this.formulario.plazo_anios),
+      es_perpetuo: this.formulario.es_perpetuo,
+      monto_contrato_bs:
+        this.formulario.monto_contrato_bs !== null
+          ? Number(this.formulario.monto_contrato_bs)
+          : undefined,
     };
 
     this.guardando = true;
@@ -174,6 +296,43 @@ export class RegistroDifuntosComponent implements OnInit {
     });
   }
 
+  /**
+   * Lleva el contrato al Módulo Tributario para emitir la liquidación y el
+   * PDF de caja con los datos del difunto, el plazo y el precio acordado.
+   */
+  emitirContrato(): void {
+    if (!this.nichoRegistrado) {
+      return;
+    }
+
+    const difunto = [
+      this.formulario.apellido_paterno.trim(),
+      this.formulario.apellido_materno.trim(),
+      this.formulario.nombres.trim(),
+    ]
+      .filter((parte) => parte.length > 0)
+      .join(' ');
+
+    const ubicacion = `${this.bloqueRegistrado || 'Bloque'} - Fila ${
+      this.nichoRegistrado.fila
+    }, Columna ${this.nichoRegistrado.columna}`;
+
+    this.router.navigate(['/dashboard/recaudacion'], {
+      queryParams: {
+        difunto,
+        solicitante: this.formulario.solicitante.trim(),
+        ubicacion,
+        tipoEspacio: this.formulario.tipo_espacio,
+        plazoAnios: this.formulario.es_perpetuo
+          ? null
+          : this.formulario.plazo_anios,
+        esPerpetuo: this.formulario.es_perpetuo,
+        anioVencimiento: this.anioVencimiento,
+        montoContrato: this.formulario.monto_contrato_bs,
+      },
+    });
+  }
+
   /** Limpia el formulario para un nuevo registro conservando el bloque. */
   registrarOtro(): void {
     this.nichoRegistrado = null;
@@ -187,5 +346,10 @@ export class RegistroDifuntosComponent implements OnInit {
     this.formulario.telefono_solicitante = '';
     this.formulario.resolucion = '';
     this.formulario.estado = 'Ocupado';
+    this.formulario.tipo_espacio = 'Nicho';
+    this.formulario.regimen = this.regimenes[0].etiqueta;
+    this.formulario.plazo_anios = this.regimenes[0].plazo;
+    this.formulario.es_perpetuo = this.regimenes[0].perpetuo;
+    this.formulario.monto_contrato_bs = this.regimenes[0].monto;
   }
 }

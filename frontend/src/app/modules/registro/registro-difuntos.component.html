@@ -4,7 +4,7 @@
         <p>Inscripción formal del difunto en un nicho o mausoleo del Cementerio Municipal</p>
     </div>
 
-    <!-- Confirmación con acceso rápido al geovisor -->
+    <!-- Confirmación con acceso rápido al geovisor y al módulo tributario -->
     <div class="alerta-exito" *ngIf="nichoRegistrado as nicho">
         <div class="exito-texto">
             <strong>Registro guardado correctamente.</strong>
@@ -14,6 +14,8 @@
             </span>
         </div>
         <div class="exito-acciones">
+            <button type="button" class="btn-contrato" (click)="emitirContrato()">Emitir Contrato y
+                Liquidación en Caja</button>
             <button type="button" class="btn-geovisor" (click)="verEnGeovisor()">Ver en el Geovisor</button>
             <button type="button" class="btn-secundario" (click)="registrarOtro()">Registrar otro</button>
         </div>
@@ -45,6 +47,14 @@
                 <input id="columna" name="columna" type="number" min="1" step="1" class="form-control"
                     [(ngModel)]="formulario.columna">
             </div>
+
+            <div class="form-group">
+                <label for="tipo_espacio">Tipo de Espacio</label>
+                <select id="tipo_espacio" name="tipo_espacio" class="form-control"
+                    [(ngModel)]="formulario.tipo_espacio">
+                    <option *ngFor="let tipo of tiposEspacio" [value]="tipo">{{ tipo }}</option>
+                </select>
+            </div>
         </div>
 
         <div class="error-bloques" *ngIf="errorBloques">{{ errorBloques }}</div>
@@ -74,6 +84,46 @@
                 <label for="anio_defuncion">Año de Defunción / Entierro</label>
                 <input id="anio_defuncion" name="anio_defuncion" type="number" min="1900" max="2100" step="1"
                     class="form-control" [(ngModel)]="formulario.anio_defuncion" placeholder="Ej: 2026">
+            </div>
+        </div>
+
+        <h4>Régimen del Contrato</h4>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="regimen">Régimen / Plazo del Contrato</label>
+                <select id="regimen" name="regimen" class="form-control" [ngModel]="formulario.regimen"
+                    (ngModelChange)="seleccionarRegimen($event)">
+                    <option *ngFor="let r of regimenes" [value]="r.etiqueta">{{ r.etiqueta }}</option>
+                </select>
+                <small class="help-text">
+                    Temporal: el precio es el monto global del contrato. Perpetuo: solo mantenimiento anual.
+                </small>
+            </div>
+
+            <div class="form-group" *ngIf="esPlazoPersonalizado && !formulario.es_perpetuo">
+                <label for="plazo_anios">Plazo en Años (libre)</label>
+                <input id="plazo_anios" name="plazo_anios" type="number" min="1" step="1" class="form-control"
+                    [(ngModel)]="formulario.plazo_anios" placeholder="Ej: 2">
+            </div>
+
+            <div class="form-group">
+                <label for="monto_contrato_bs">Precio / Monto del Contrato (Bs.)</label>
+                <input id="monto_contrato_bs" name="monto_contrato_bs" type="number" min="0" step="0.01"
+                    class="form-control" [(ngModel)]="formulario.monto_contrato_bs" placeholder="Ej: 150">
+                <small class="help-text">Precio libre acordado por el encargado.</small>
+            </div>
+
+            <div class="form-group">
+                <label>Vencimiento del Contrato</label>
+                <div class="valor-calculado">
+                    <ng-container *ngIf="formulario.es_perpetuo">
+                        Perpetuo — sin vencimiento (mantenimiento anual)
+                    </ng-container>
+                    <ng-container *ngIf="!formulario.es_perpetuo">
+                        {{ anioVencimiento ? ('Año ' + anioVencimiento) : 'Indique el plazo y el año de defunción' }}
+                    </ng-container>
+                </div>
             </div>
         </div>
 
