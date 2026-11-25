@@ -11,10 +11,12 @@
         <div class="buscador-input">
             <input
                 type="text"
-                [(ngModel)]="terminoBusqueda"
+                [ngModel]="terminoBusqueda"
+                (ngModelChange)="onTerminoChange($event)"
                 (keyup.enter)="buscar()"
                 placeholder="Buscar difunto por apellido..."
                 aria-label="Buscar difunto por apellido"
+                autocomplete="off"
             >
             <button class="btn-buscar" (click)="buscar()" [disabled]="buscando">
                 {{ buscando ? 'Buscando...' : 'Buscar' }}

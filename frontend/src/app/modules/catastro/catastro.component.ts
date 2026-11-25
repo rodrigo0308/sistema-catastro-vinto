@@ -1,8 +1,19 @@
-import { Component, AfterViewInit } from '@angular/core';
+import { Component, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin } from 'rxjs';
+import {
+  Observable,
+  Subject,
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  forkJoin,
+  merge,
+  of,
+  switchMap,
+  takeUntil,
+} from 'rxjs';
 import * as L from 'leaflet';
 
 const API_URL = 'http://localhost:3000';
@@ -52,9 +63,14 @@ interface FilaMatriz {
   templateUrl: './catastro.component.html',
   styleUrl: './catastro.component.css',
 })
-export class CatastroComponent implements AfterViewInit {
+export class CatastroComponent implements AfterViewInit, OnDestroy {
   private map!: L.Map;
   private capaBloques?: L.GeoJSON;
+
+  // Buscador reactivo: lo que se escribe y lo que dispara el botón "Buscar"
+  private readonly termino$ = new Subject<string>();
+  private readonly busquedaManual$ = new Subject<string>();
+  private readonly destruir$ = new Subject<void>();
 
   // Panel tipo Excel
   panelAbierto = false;
@@ -72,11 +88,36 @@ export class CatastroComponent implements AfterViewInit {
   errorBusqueda = '';
   busquedaRealizada = false;
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {
+    // Búsqueda instantánea: 250 ms después de la última tecla y solo si el
+    // término cambió. switchMap descarta respuestas obsoletas de consultas
+    // anteriores. El botón "Buscar" consulta de inmediato (sin espera).
+    merge(
+      this.termino$.pipe(debounceTime(250), distinctUntilChanged()),
+      this.busquedaManual$,
+    )
+      .pipe(
+        switchMap((termino) => this.consultarDifuntos(termino)),
+        takeUntil(this.destruir$),
+      )
+      .subscribe((data) => {
+        if (!data) {
+          return;
+        }
+        this.resultados = data;
+        this.buscando = false;
+        this.busquedaRealizada = true;
+      });
+  }
 
   ngAfterViewInit(): void {
     this.iniciarMapa();
     this.cargarCementerio();
+  }
+
+  ngOnDestroy(): void {
+    this.destruir$.next();
+    this.destruir$.complete();
   }
 
   private iniciarMapa(): void {
@@ -93,10 +134,14 @@ export class CatastroComponent implements AfterViewInit {
     this.map.createPane('perimetro-borde');
     this.map.getPane('perimetro-borde')!.style.zIndex = '420';
 
-    // Capa Satelital de Alta Resolución (ESRI)
+    // Capa Satelital de Alta Resolución (ESRI). En Vinto solo existen baldosas
+    // reales hasta el zoom 18, así que maxNativeZoom las escala hasta el 21
+    // en lugar de mostrar cuadros grises al acercarse.
     L.tileLayer(
       'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       {
+        maxNativeZoom: 18,
+        maxZoom: 21,
         attribution:
           'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
       },
@@ -165,7 +210,7 @@ export class CatastroComponent implements AfterViewInit {
       color: MASCARA_COLOR,
       weight: 0,
       fillColor: MASCARA_COLOR,
-      fillOpacity: 0.55,
+      fillOpacity: 0.35,
       interactive: false,
     }).addTo(this.map);
 
@@ -331,6 +376,22 @@ export class CatastroComponent implements AfterViewInit {
     return partes.join('\n');
   }
 
+  /** Se dispara con cada tecla: alimenta el buscador reactivo. */
+  onTerminoChange(termino: string): void {
+    this.terminoBusqueda = termino ?? '';
+
+    // Con menos de 2 letras la lista se limpia al instante, sin esperar.
+    if (this.terminoBusqueda.trim().length < 2) {
+      this.resultados = [];
+      this.errorBusqueda = '';
+      this.busquedaRealizada = false;
+      this.buscando = false;
+    }
+
+    this.termino$.next(this.terminoBusqueda);
+  }
+
+  /** Botón "Buscar": consulta de inmediato, sin esperar el debounce. */
   buscar(): void {
     const termino = this.terminoBusqueda.trim();
     this.errorBusqueda = '';
@@ -342,26 +403,39 @@ export class CatastroComponent implements AfterViewInit {
       return;
     }
 
+    this.busquedaManual$.next(termino);
+  }
+
+  /** Consulta /catastro/buscar y normaliza el estado de carga y de error. */
+  private consultarDifuntos(
+    terminoCrudo: string,
+  ): Observable<ResultadoBusqueda[] | null> {
+    const termino = (terminoCrudo ?? '').trim();
+    this.errorBusqueda = '';
+
+    if (termino.length < 2) {
+      this.resultados = [];
+      this.buscando = false;
+      this.busquedaRealizada = false;
+      return of(null);
+    }
+
     this.buscando = true;
 
-    this.http
+    return this.http
       .get<ResultadoBusqueda[]>(`${API_URL}/catastro/buscar`, {
         params: { apellido: termino },
       })
-      .subscribe({
-        next: (data) => {
-          this.resultados = data;
-          this.buscando = false;
-          this.busquedaRealizada = true;
-        },
-        error: (err) => {
+      .pipe(
+        catchError((err) => {
           console.error('Error en la búsqueda de difuntos:', err);
           this.resultados = [];
           this.buscando = false;
           this.errorBusqueda =
             'No se pudo realizar la búsqueda. Verifique la conexión con el servidor.';
-        },
-      });
+          return of(null);
+        }),
+      );
   }
 
   /** Zoom al bloque del resultado, abre su cuadrícula y resalta el nicho. */
@@ -393,6 +467,8 @@ export class CatastroComponent implements AfterViewInit {
     this.resultados = [];
     this.errorBusqueda = '';
     this.busquedaRealizada = false;
+    this.buscando = false;
+    this.termino$.next('');
   }
 
   etiquetaResultado(resultado: ResultadoBusqueda): string {
