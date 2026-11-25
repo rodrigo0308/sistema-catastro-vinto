@@ -1,7 +1,9 @@
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -64,4 +66,22 @@ export class RegistrarDifuntoDto {
   @IsOptional()
   @IsIn(['Ocupado', 'Mora'])
   estado?: 'Ocupado' | 'Mora';
+
+  @IsOptional()
+  @IsIn(['Nicho', 'Mausoleo', 'Camposanto'])
+  tipo_espacio?: 'Nicho' | 'Mausoleo' | 'Camposanto';
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  plazo_anios?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  es_perpetuo?: boolean;
+
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  monto_contrato_bs?: number;
 }

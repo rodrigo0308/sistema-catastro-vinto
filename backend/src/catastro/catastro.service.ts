@@ -148,6 +148,21 @@ export class CatastroService {
     nicho.resolucion = datos.resolucion?.trim() || null;
     nicho.estado = datos.estado ?? 'Ocupado';
 
+    // Condiciones del contrato: el plazo es libre y el monto lo fija el
+    // encargado. Si es perpetuo no hay plazo ni año de vencimiento.
+    const esPerpetuo = datos.es_perpetuo === true;
+    const plazoAnios = esPerpetuo ? null : (datos.plazo_anios ?? null);
+    const anioDefuncion = datos.anio_defuncion ?? null;
+
+    nicho.tipo_espacio = datos.tipo_espacio ?? 'Nicho';
+    nicho.es_perpetuo = esPerpetuo;
+    nicho.plazo_anios = plazoAnios;
+    nicho.anio_vencimiento =
+      !esPerpetuo && plazoAnios !== null && anioDefuncion !== null
+        ? anioDefuncion + plazoAnios
+        : null;
+    nicho.monto_contrato_bs = datos.monto_contrato_bs ?? null;
+
     return this.nichoRepository.save(nicho);
   }
 

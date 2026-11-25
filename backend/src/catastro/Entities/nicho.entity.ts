@@ -66,4 +66,34 @@ export class Nicho {
 
   @Column({ type: 'varchar', length: 20, default: 'Libre' })
   estado!: EstadoNicho;
+
+  // Condiciones del contrato de uso del espacio.
+  @Column({ name: 'tipo_espacio', type: 'varchar', length: 20, default: 'Nicho' })
+  tipo_espacio!: 'Nicho' | 'Mausoleo' | 'Camposanto';
+
+  // Plazo libre en años; null cuando el contrato es perpetuo.
+  @Column({ name: 'plazo_anios', type: 'int', nullable: true })
+  plazo_anios!: number | null;
+
+  @Column({ name: 'es_perpetuo', type: 'boolean', default: false })
+  es_perpetuo!: boolean;
+
+  // Calculado automáticamente: anio_defuncion + plazo_anios.
+  @Column({ name: 'anio_vencimiento', type: 'int', nullable: true })
+  anio_vencimiento!: number | null;
+
+  // Precio acordado por el encargado para el contrato.
+  @Column({
+    name: 'monto_contrato_bs',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: {
+      to: (valor: number | null) => valor,
+      from: (valor: string | null) =>
+        valor === null || valor === undefined ? null : Number(valor),
+    },
+  })
+  monto_contrato_bs!: number | null;
 }
