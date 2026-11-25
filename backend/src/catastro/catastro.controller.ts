@@ -1,14 +1,17 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
   ParseUUIDPipe,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { CatastroService } from './catastro.service';
+import { RegistrarDifuntoDto } from './dto/registrar-difunto.dto';
 
 /**
  * Geovisor de catastro. Todos los endpoints requieren JWT válido.
@@ -22,6 +25,18 @@ export class CatastroController {
   @Get('mapa')
   obtenerMapa() {
     return this.catastroService.obtenerMapaGeoJson();
+  }
+
+  // Bloques/mausoleos para el selector del registro de difuntos
+  @Get('bloques')
+  obtenerBloques() {
+    return this.catastroService.obtenerBloques();
+  }
+
+  // Registro formal de un difunto en una celda libre (o nueva) del bloque
+  @Post('nichos/registrar')
+  registrarDifunto(@Body() datos: RegistrarDifuntoDto) {
+    return this.catastroService.registrarDifunto(datos);
   }
 
   // Nichos (filas/columnas) de un bloque para la cuadrícula tipo Excel

@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PredioNicho } from './Entities/predio_nicho.entity';
 import { Nicho } from './Entities/nicho.entity';
+import { RegistrarDifuntoDto } from './dto/registrar-difunto.dto';
 
 @Injectable()
 export class CatastroService {
@@ -76,6 +81,74 @@ export class CatastroService {
       ),
       nichos,
     };
+  }
+
+  /** Lista los bloques/mausoleos ordenados alfabéticamente por código. */
+  async obtenerBloques() {
+    return this.predioRepository
+      .createQueryBuilder('predio')
+      .select(['predio.id', 'predio.codigo_lote'])
+      .where('predio.poligono IS NOT NULL')
+      .orderBy('predio.codigo_lote', 'ASC')
+      .getMany();
+  }
+
+  /**
+   * Registra formalmente a un difunto en la posición (predio, fila, columna).
+   * Si la celda existe y está Libre se actualiza; si no existe se inserta.
+   * `apellido_difunto` y `nombre_difunto` se construyen automáticamente para
+   * que el buscador y el geovisor sigan funcionando igual.
+   */
+  async registrarDifunto(datos: RegistrarDifuntoDto): Promise<Nicho> {
+    const bloque = await this.predioRepository.findOne({
+      where: { id: datos.predio_id },
+    });
+
+    if (!bloque) {
+      throw new NotFoundException(
+        `No existe un bloque con el id ${datos.predio_id}`,
+      );
+    }
+
+    const apellidoPaterno = datos.apellido_paterno.trim();
+    const apellidoMaterno = (datos.apellido_materno ?? '').trim();
+    const nombres = datos.nombres.trim();
+    const apellidoCompleto = `${apellidoPaterno} ${apellidoMaterno}`.trim();
+
+    let nicho = await this.nichoRepository.findOne({
+      where: {
+        predio_id: datos.predio_id,
+        fila: datos.fila,
+        columna: datos.columna,
+      },
+    });
+
+    if (nicho && nicho.estado !== 'Libre') {
+      throw new ConflictException(
+        `La posición fila ${datos.fila}, columna ${datos.columna} ya está ocupada en el bloque ${bloque.codigo_lote}.`,
+      );
+    }
+
+    if (!nicho) {
+      nicho = this.nichoRepository.create({
+        predio_id: datos.predio_id,
+        fila: datos.fila,
+        columna: datos.columna,
+      });
+    }
+
+    nicho.apellido_paterno = apellidoPaterno;
+    nicho.apellido_materno = apellidoMaterno || null;
+    nicho.nombres = nombres;
+    nicho.apellido_difunto = apellidoCompleto;
+    nicho.nombre_difunto = nombres;
+    nicho.anio_defuncion = datos.anio_defuncion ?? null;
+    nicho.solicitante = datos.solicitante?.trim() || null;
+    nicho.telefono_solicitante = datos.telefono_solicitante?.trim() || null;
+    nicho.resolucion = datos.resolucion?.trim() || null;
+    nicho.estado = datos.estado ?? 'Ocupado';
+
+    return this.nichoRepository.save(nicho);
   }
 
   /**

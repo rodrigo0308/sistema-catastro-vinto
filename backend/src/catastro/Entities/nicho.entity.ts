@@ -41,6 +41,23 @@ export class Nicho {
   @Column({ type: 'varchar', length: 255, nullable: true })
   apellido_difunto!: string | null;
 
+  // Registro formal boliviano (se mantienen los campos anteriores para el
+  // buscador y el seed).
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  apellido_paterno!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  apellido_materno!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  nombres!: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  anio_defuncion!: number | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  telefono_solicitante!: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   solicitante!: string | null;
 
