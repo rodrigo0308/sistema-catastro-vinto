@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { HttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 
 import { DashboardComponent } from './dashboard.component';
 
@@ -8,10 +10,13 @@ describe('DashboardComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DashboardComponent]
-    })
-    .compileComponents();
-    
+      imports: [DashboardComponent],
+      providers: [
+        { provide: HttpClient, useValue: { get: () => null, post: () => null } },
+        provideRouter([]),
+      ],
+    }).compileComponents();
+
     fixture = TestBed.createComponent(DashboardComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -19,5 +24,11 @@ describe('DashboardComponent', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('debería alternar el sidebar', () => {
+    expect(component.isCollapsed).toBeFalse();
+    component.toggleSidebar();
+    expect(component.isCollapsed).toBeTrue();
   });
 });
