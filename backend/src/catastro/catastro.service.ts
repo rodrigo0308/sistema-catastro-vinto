@@ -189,6 +189,11 @@ export class CatastroService {
       apellido_difunto: string | null;
       solicitante: string | null;
       resolucion: string | null;
+      tipo_espacio: string | null;
+      plazo_anios: number | string | null;
+      es_perpetuo: boolean | null;
+      anio_vencimiento: number | string | null;
+      monto_contrato_bs: number | string | null;
       centro_lat: number;
       centro_lng: number;
       min_lat: number;
@@ -207,6 +212,11 @@ export class CatastroService {
          n.apellido_difunto,
          n.solicitante,
          n.resolucion,
+         n.tipo_espacio,
+         n.plazo_anios,
+         n.es_perpetuo,
+         n.anio_vencimiento,
+         n.monto_contrato_bs,
          ST_Y(ST_Centroid(p.poligono)) AS centro_lat,
          ST_X(ST_Centroid(p.poligono)) AS centro_lng,
          ST_YMin(ST_Envelope(p.poligono)) AS min_lat,
@@ -233,6 +243,13 @@ export class CatastroService {
       apellido_difunto: r.apellido_difunto,
       solicitante: r.solicitante,
       resolucion: r.resolucion,
+      tipo_espacio: r.tipo_espacio ?? 'Nicho',
+      plazo_anios: r.plazo_anios === null ? null : Number(r.plazo_anios),
+      es_perpetuo: r.es_perpetuo === true,
+      anio_vencimiento:
+        r.anio_vencimiento === null ? null : Number(r.anio_vencimiento),
+      monto_contrato_bs:
+        r.monto_contrato_bs === null ? null : Number(r.monto_contrato_bs),
       centro: { lat: Number(r.centro_lat), lng: Number(r.centro_lng) },
       bounds: {
         minLat: Number(r.min_lat),
