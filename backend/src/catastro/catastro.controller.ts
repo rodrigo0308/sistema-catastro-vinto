@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -12,6 +13,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { CatastroService } from './catastro.service';
 import { RegistrarDifuntoDto } from './dto/registrar-difunto.dto';
+import { ActualizarNichoDto } from './dto/actualizar-nicho.dto';
+import { CrearCamposantoDto } from './dto/crear-camposanto.dto';
+import { CrearBloqueDto } from './dto/crear-bloque.dto';
 
 /**
  * Geovisor de catastro. Todos los endpoints requieren JWT válido.
@@ -43,6 +47,32 @@ export class CatastroController {
   @Get('bloque/:id/nichos')
   obtenerNichosDeBloque(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.catastroService.obtenerNichosDeBloque(id);
+  }
+
+  // Edición administrativa de nichos, mausoleos, perpetuos y camposantos
+  @Patch('nichos/:id')
+  actualizarNicho(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() datos: ActualizarNichoDto,
+  ) {
+    return this.catastroService.actualizarNicho(id, datos);
+  }
+
+  // Gestión especializada de sepulturas en tierra
+  @Get('camposantos')
+  obtenerCamposantos() {
+    return this.catastroService.obtenerCamposantos();
+  }
+
+  @Post('camposantos')
+  crearCamposanto(@Body() datos: CrearCamposantoDto) {
+    return this.catastroService.crearCamposanto(datos);
+  }
+
+  // Creación dinámica de bloques/mausoleos dibujados sobre el mapa
+  @Post('bloques')
+  crearBloque(@Body() datos: CrearBloqueDto) {
+    return this.catastroService.crearBloque(datos);
   }
 
   // Buscador de difuntos por apellido o nombre

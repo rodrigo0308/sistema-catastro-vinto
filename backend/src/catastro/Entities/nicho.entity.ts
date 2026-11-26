@@ -96,4 +96,17 @@ export class Nicho {
     },
   })
   monto_contrato_bs!: number | null;
+
+  // Sector o bloque interno del camposanto (sitios en tierra).
+  @Column({
+    name: 'sector_camposanto',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  sector_camposanto!: string | null;
+
+  // Observaciones de campo del encargado del cementerio.
+  @Column({ type: 'text', nullable: true })
+  observaciones!: string | null;
 }

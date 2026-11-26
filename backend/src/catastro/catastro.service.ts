@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -8,6 +9,26 @@ import { Repository } from 'typeorm';
 import { PredioNicho } from './Entities/predio_nicho.entity';
 import { Nicho } from './Entities/nicho.entity';
 import { RegistrarDifuntoDto } from './dto/registrar-difunto.dto';
+import { ActualizarNichoDto } from './dto/actualizar-nicho.dto';
+import { CrearCamposantoDto } from './dto/crear-camposanto.dto';
+import { CrearBloqueDto } from './dto/crear-bloque.dto';
+
+/** Predio base que agrupa los sitios en tierra cuando no se indica otro. */
+const PREDIO_CAMPOSANTOS = 'CAMPOSANTOS';
+
+/** Ubicación de respaldo del predio base de camposantos (interior del cementerio). */
+const POLIGONO_CAMPOSANTOS = {
+  type: 'Polygon',
+  coordinates: [
+    [
+      [-66.3061, -17.4084],
+      [-66.3054, -17.4084],
+      [-66.3054, -17.4079],
+      [-66.3061, -17.4079],
+      [-66.3061, -17.4084],
+    ],
+  ],
+};
 
 @Injectable()
 export class CatastroService {
@@ -258,5 +279,373 @@ export class CatastroService {
         maxLng: Number(r.max_lng),
       },
     }));
+  }
+
+  /**
+   * Edición administrativa de cualquier celda existente (nicho, mausoleo,
+   * perpetuo o camposanto). Recalcula el nombre del difunto y el año de
+   * vencimiento a partir de los datos del régimen recibidos.
+   */
+  async actualizarNicho(
+    id: string,
+    datos: ActualizarNichoDto,
+  ): Promise<Nicho> {
+    const nicho = await this.nichoRepository.findOne({ where: { id } });
+
+    if (!nicho) {
+      throw new NotFoundException(`No existe un nicho con el id ${id}`);
+    }
+
+    if (datos.apellido_paterno !== undefined) {
+      nicho.apellido_paterno = this.limpiarTexto(datos.apellido_paterno);
+    }
+    if (datos.apellido_materno !== undefined) {
+      nicho.apellido_materno = this.limpiarTexto(datos.apellido_materno);
+    }
+    if (datos.nombres !== undefined) {
+      nicho.nombres = this.limpiarTexto(datos.nombres);
+    }
+    if (datos.anio_defuncion !== undefined) {
+      nicho.anio_defuncion = datos.anio_defuncion ?? null;
+    }
+    if (datos.solicitante !== undefined) {
+      nicho.solicitante = this.limpiarTexto(datos.solicitante);
+    }
+    if (datos.telefono_solicitante !== undefined) {
+      nicho.telefono_solicitante = this.limpiarTexto(datos.telefono_solicitante);
+    }
+    if (datos.resolucion !== undefined) {
+      nicho.resolucion = this.limpiarTexto(datos.resolucion);
+    }
+    if (datos.tipo_espacio !== undefined) {
+      nicho.tipo_espacio = datos.tipo_espacio;
+    }
+    if (datos.estado !== undefined) {
+      nicho.estado = datos.estado;
+    }
+    if (datos.monto_contrato_bs !== undefined) {
+      nicho.monto_contrato_bs = datos.monto_contrato_bs ?? null;
+    }
+    if (datos.sector_camposanto !== undefined) {
+      nicho.sector_camposanto = this.limpiarTexto(datos.sector_camposanto);
+    }
+    if (datos.observaciones !== undefined) {
+      nicho.observaciones = this.limpiarTexto(datos.observaciones);
+    }
+
+    if (datos.es_perpetuo !== undefined) {
+      nicho.es_perpetuo = datos.es_perpetuo;
+    }
+    if (datos.plazo_anios !== undefined) {
+      nicho.plazo_anios = datos.plazo_anios ?? null;
+    }
+    // Un contrato perpetuo no conserva plazo ni año de vencimiento.
+    if (nicho.es_perpetuo) {
+      nicho.plazo_anios = null;
+    }
+
+    const apellidoPaterno = (nicho.apellido_paterno ?? '').trim();
+    const apellidoMaterno = (nicho.apellido_materno ?? '').trim();
+    nicho.apellido_difunto = `${apellidoPaterno} ${apellidoMaterno}`.trim() || null;
+    nicho.nombre_difunto = (nicho.nombres ?? '').trim() || null;
+    nicho.anio_vencimiento = this.calcularAnioVencimiento(nicho);
+
+    return this.nichoRepository.save(nicho);
+  }
+
+  /** Lista todos los sitios en tierra (camposantos) ordenados por apellido. */
+  async obtenerCamposantos() {
+    const nichos = await this.nichoRepository.find({
+      where: { tipo_espacio: 'Camposanto' },
+      relations: { predio: true },
+      order: { apellido_difunto: 'ASC', fila: 'ASC', columna: 'ASC' },
+    });
+
+    return nichos.map((nicho) => this.serializarNicho(nicho));
+  }
+
+  /**
+   * Registra un sitio en tierra individual. Si no se indica un predio base se
+   * usa (o crea) el predio "CAMPOSANTOS" y se asigna la siguiente posición.
+   */
+  async crearCamposanto(datos: CrearCamposantoDto) {
+    const predio = await this.obtenerPredioCamposantos(datos.predio_id);
+    const { fila, columna } = await this.resolverPosicionCamposanto(
+      predio.id,
+      datos.fila,
+      datos.columna,
+    );
+
+    let nicho = await this.nichoRepository.findOne({
+      where: { predio_id: predio.id, fila, columna },
+    });
+
+    if (nicho && nicho.estado !== 'Libre') {
+      throw new ConflictException(
+        `La posición fila ${fila}, sitio ${columna} ya está ocupada en el camposanto.`,
+      );
+    }
+
+    if (!nicho) {
+      nicho = this.nichoRepository.create({
+        predio_id: predio.id,
+        fila,
+        columna,
+      });
+    }
+
+    const apellidoPaterno = this.limpiarTexto(datos.apellido_paterno);
+    const apellidoMaterno = this.limpiarTexto(datos.apellido_materno);
+
+    nicho.apellido_paterno = apellidoPaterno;
+    nicho.apellido_materno = apellidoMaterno;
+    nicho.nombres = this.limpiarTexto(datos.nombres);
+    nicho.apellido_difunto =
+      `${apellidoPaterno ?? ''} ${apellidoMaterno ?? ''}`.trim() || null;
+    nicho.nombre_difunto = nicho.nombres;
+    nicho.anio_defuncion = datos.anio_defuncion ?? null;
+    nicho.solicitante = this.limpiarTexto(datos.solicitante);
+    nicho.telefono_solicitante = this.limpiarTexto(datos.telefono_solicitante);
+    nicho.resolucion = this.limpiarTexto(datos.resolucion);
+    nicho.sector_camposanto = this.limpiarTexto(datos.sector_camposanto);
+    nicho.observaciones = this.limpiarTexto(datos.observaciones);
+    nicho.tipo_espacio = 'Camposanto';
+    nicho.estado = datos.estado ?? 'Ocupado';
+    nicho.es_perpetuo = datos.es_perpetuo === true;
+    nicho.plazo_anios = nicho.es_perpetuo ? null : (datos.plazo_anios ?? null);
+    nicho.monto_contrato_bs = datos.monto_contrato_bs ?? null;
+    nicho.anio_vencimiento = this.calcularAnioVencimiento(nicho);
+
+    const guardado = await this.nichoRepository.save(nicho);
+    return this.serializarNicho({ ...guardado, predio } as Nicho);
+  }
+
+  /**
+   * Crea un bloque/mausoleo a partir del polígono dibujado en el geovisor y
+   * genera su matriz inicial de nichos en estado Libre (filas x columnas).
+   */
+  async crearBloque(datos: CrearBloqueDto) {
+    const codigo = datos.codigo_lote.trim();
+    const existente = await this.predioRepository.findOne({
+      where: { codigo_lote: codigo },
+    });
+
+    if (existente) {
+      throw new ConflictException(
+        `Ya existe un bloque con el código ${codigo}.`,
+      );
+    }
+
+    const anillo = this.normalizarAnillo(datos.coordenadas);
+
+    const [predio] = await this.predioRepository.query(
+      `INSERT INTO predio_nicho (codigo_lote, estado, poligono)
+       VALUES ($1, $2, ST_SetSRID(ST_GeomFromGeoJSON($3), 4326))
+       RETURNING id, codigo_lote, estado`,
+      [
+        codigo,
+        datos.estado ?? 'Libre',
+        JSON.stringify({ type: 'Polygon', coordinates: [anillo] }),
+      ],
+    );
+
+    const filas = Math.max(1, Math.trunc(Number(datos.filas)));
+    const columnas = Math.max(1, Math.trunc(Number(datos.columnas)));
+    const tipo = datos.tipo_espacio_default ?? 'Nicho';
+    const nichos: Nicho[] = [];
+
+    for (let fila = 1; fila <= filas; fila++) {
+      for (let columna = 1; columna <= columnas; columna++) {
+        nichos.push(
+          this.nichoRepository.create({
+            predio_id: predio.id,
+            fila,
+            columna,
+            estado: 'Libre',
+            tipo_espacio: tipo,
+            es_perpetuo: false,
+          }),
+        );
+      }
+    }
+
+    await this.nichoRepository.save(nichos);
+
+    return {
+      bloque: {
+        id: predio.id,
+        codigo_lote: predio.codigo_lote,
+        estado: predio.estado ?? datos.estado ?? 'Libre',
+      },
+      filas,
+      columnas,
+      tipo_espacio_default: tipo,
+      nichos_creados: nichos.length,
+    };
+  }
+
+  /** Texto recortado; los campos vacíos se guardan como null. */
+  private limpiarTexto(valor?: string | null): string | null {
+    const texto = (valor ?? '').trim();
+    return texto.length > 0 ? texto : null;
+  }
+
+  /**
+   * Año de vencimiento del contrato: null si es perpetuo o si falta el plazo
+   * o el año de defunción; en otro caso anio_defuncion + plazo_anios.
+   */
+  private calcularAnioVencimiento(nicho: {
+    es_perpetuo?: boolean | null;
+    plazo_anios?: number | null;
+    anio_defuncion?: number | null;
+  }): number | null {
+    if (nicho.es_perpetuo) {
+      return null;
+    }
+
+    const plazo = Number(nicho.plazo_anios);
+    const anio = Number(nicho.anio_defuncion);
+
+    if (!Number.isFinite(plazo) || !Number.isFinite(anio) || plazo < 1) {
+      return null;
+    }
+
+    return anio + plazo;
+  }
+
+  /** Forma plana del nicho con su bloque, usada por la gestión de camposantos. */
+  private serializarNicho(nicho: Nicho) {
+    const bloque = (nicho as Nicho & { predio?: PredioNicho | null }).predio;
+
+    return {
+      id: nicho.id,
+      predio_id: nicho.predio_id,
+      codigo_lote: bloque?.codigo_lote ?? null,
+      sector_camposanto: nicho.sector_camposanto ?? null,
+      fila: nicho.fila,
+      columna: nicho.columna,
+      apellido_paterno: nicho.apellido_paterno ?? null,
+      apellido_materno: nicho.apellido_materno ?? null,
+      nombres: nicho.nombres ?? null,
+      nombre_difunto: nicho.nombre_difunto ?? null,
+      apellido_difunto: nicho.apellido_difunto ?? null,
+      anio_defuncion: nicho.anio_defuncion ?? null,
+      solicitante: nicho.solicitante ?? null,
+      telefono_solicitante: nicho.telefono_solicitante ?? null,
+      resolucion: nicho.resolucion ?? null,
+      estado: nicho.estado,
+      tipo_espacio: nicho.tipo_espacio ?? 'Camposanto',
+      plazo_anios: nicho.plazo_anios ?? null,
+      es_perpetuo: nicho.es_perpetuo === true,
+      anio_vencimiento: nicho.anio_vencimiento ?? null,
+      monto_contrato_bs: nicho.monto_contrato_bs ?? null,
+      observaciones: nicho.observaciones ?? null,
+    };
+  }
+
+  /** Predio indicado, o el predio base de camposantos creado si no existe. */
+  private async obtenerPredioCamposantos(
+    predioId?: string,
+  ): Promise<PredioNicho> {
+    if (predioId) {
+      const predio = await this.predioRepository.findOne({
+        where: { id: predioId },
+      });
+
+      if (!predio) {
+        throw new NotFoundException(
+          `No existe un bloque con el id ${predioId}`,
+        );
+      }
+
+      return predio;
+    }
+
+    const existente = await this.predioRepository.findOne({
+      where: { codigo_lote: PREDIO_CAMPOSANTOS },
+    });
+
+    if (existente) {
+      return existente;
+    }
+
+    const [creado] = await this.predioRepository.query(
+      `INSERT INTO predio_nicho (codigo_lote, estado, poligono)
+       VALUES ($1, 'Libre', ST_SetSRID(ST_GeomFromGeoJSON($2), 4326))
+       RETURNING id, codigo_lote, estado`,
+      [PREDIO_CAMPOSANTOS, JSON.stringify(POLIGONO_CAMPOSANTOS)],
+    );
+
+    return creado as PredioNicho;
+  }
+
+  /** Siguiente sitio libre dentro de la fila indicada del camposanto. */
+  private async resolverPosicionCamposanto(
+    predioId: string,
+    fila?: number,
+    columna?: number,
+  ): Promise<{ fila: number; columna: number }> {
+    const filaFinal = fila ?? 1;
+
+    if (columna) {
+      return { fila: filaFinal, columna };
+    }
+
+    const [filaMax] = await this.nichoRepository.query(
+      `SELECT COALESCE(MAX(columna), 0) AS maxima
+         FROM nichos
+        WHERE predio_id = $1 AND fila = $2`,
+      [predioId, filaFinal],
+    );
+
+    return {
+      fila: filaFinal,
+      columna: Number(filaMax?.maxima ?? 0) + 1,
+    };
+  }
+
+  /**
+   * Valida el anillo [lng, lat] del polígono dibujado y lo cierra si el
+   * último vértice no coincide con el primero.
+   */
+  private normalizarAnillo(coordenadas: number[][]): number[][] {
+    if (!Array.isArray(coordenadas) || coordenadas.length < 3) {
+      throw new BadRequestException(
+        'El polígono debe tener al menos 3 vértices en formato [lng, lat].',
+      );
+    }
+
+    const anillo = coordenadas.map((par) => {
+      if (
+        !Array.isArray(par) ||
+        par.length < 2 ||
+        !Number.isFinite(Number(par[0])) ||
+        !Number.isFinite(Number(par[1]))
+      ) {
+        throw new BadRequestException(
+          'Cada vértice debe ser un par numérico [lng, lat].',
+        );
+      }
+
+      const lng = Number(par[0]);
+      const lat = Number(par[1]);
+
+      if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+        throw new BadRequestException(
+          'Las coordenadas deben estar en grados decimales (lng, lat).',
+        );
+      }
+
+      return [lng, lat];
+    });
+
+    const primero = anillo[0];
+    const ultimo = anillo[anillo.length - 1];
+
+    if (primero[0] !== ultimo[0] || primero[1] !== ultimo[1]) {
+      anillo.push([...primero]);
+    }
+
+    return anillo;
   }
 }
