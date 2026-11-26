@@ -12,6 +12,7 @@ import { RegistrarDifuntoDto } from './dto/registrar-difunto.dto';
 import { ActualizarNichoDto } from './dto/actualizar-nicho.dto';
 import { CrearCamposantoDto } from './dto/crear-camposanto.dto';
 import { CrearBloqueDto } from './dto/crear-bloque.dto';
+import { ConfirmarPagoDto } from './dto/confirmar-pago.dto';
 
 /** Predio base que agrupa los sitios en tierra cuando no se indica otro. */
 const PREDIO_CAMPOSANTOS = 'CAMPOSANTOS';
@@ -189,7 +190,9 @@ export class CatastroService {
     nicho.telefono_solicitante = datos.telefono_solicitante?.trim() || null;
     // La Resolución Administrativa (RA.) solo corresponde a perpetuos.
     nicho.resolucion = esPerpetuo ? datos.resolucion?.trim() || null : null;
-    nicho.estado = datos.estado ?? 'Ocupado';
+    // Un contrato recién emitido queda Pendiente de Pago hasta que caja lo
+    // confirme; solo se marca Ocupado si el cliente lo indica explícitamente.
+    nicho.estado = datos.estado ?? 'Pendiente de Pago';
 
     nicho.tipo_espacio = datos.tipo_espacio ?? 'Nicho';
     nicho.es_perpetuo = esPerpetuo;
@@ -419,6 +422,34 @@ export class CatastroService {
     return this.nichoRepository.save(nicho);
   }
 
+  /**
+   * Confirma en caja el pago de un contrato emitido: el registro pasa a
+   * 'Ocupado' y, si se recibe, el N° de comprobante se anexa a las
+   * observaciones como constancia del cobro.
+   */
+  async confirmarPago(
+    id: string,
+    datos: ConfirmarPagoDto = {},
+  ): Promise<Nicho> {
+    const nicho = await this.nichoRepository.findOne({ where: { id } });
+
+    if (!nicho) {
+      throw new NotFoundException(`No existe un nicho con el id ${id}`);
+    }
+
+    nicho.estado = 'Ocupado';
+
+    const comprobante = this.limpiarTexto(datos.comprobante_caja);
+    if (comprobante) {
+      const constancia = `Pago confirmado en caja — Comprobante N° ${comprobante}`;
+      nicho.observaciones = nicho.observaciones
+        ? `${nicho.observaciones}\n${constancia}`
+        : constancia;
+    }
+
+    return this.nichoRepository.save(nicho);
+  }
+
   /** Lista todos los sitios en tierra (camposantos) ordenados por apellido. */
   async obtenerCamposantos() {
     const nichos = await this.nichoRepository.find({
@@ -477,7 +508,7 @@ export class CatastroService {
     nicho.sector_camposanto = this.limpiarTexto(datos.sector_camposanto);
     nicho.observaciones = this.limpiarTexto(datos.observaciones);
     nicho.tipo_espacio = 'Camposanto';
-    nicho.estado = datos.estado ?? 'Ocupado';
+    nicho.estado = datos.estado ?? 'Pendiente de Pago';
     nicho.es_perpetuo = datos.es_perpetuo === true;
     nicho.plazo_anios = nicho.es_perpetuo ? null : (datos.plazo_anios ?? null);
     nicho.monto_contrato_bs = datos.monto_contrato_bs ?? null;
@@ -566,9 +597,11 @@ export class CatastroService {
 
   /**
    * Alertas de vencimiento, mora y control de contratos.
-   * Clasifica los registros activos (Ocupado / Mora) según la gestión actual:
+   * Clasifica los registros activos (Pendiente de Pago / Ocupado / Mora) según
+   * la gestión actual:
    * - critico: estado Mora, o contrato temporal ya vencido.
-   * - advertencia: contrato temporal que vence este año o el próximo.
+   * - advertencia: contrato emitido pendiente de pago en caja, o contrato
+   *   temporal que vence este año o el próximo.
    * - info: contrato perpetuo (control de mantenimiento anual).
    */
   async obtenerAlertas() {
@@ -616,7 +649,7 @@ export class CatastroService {
               p.codigo_lote
          FROM nichos n
          INNER JOIN predio_nicho p ON p.id = n.predio_id
-        WHERE n.estado IN ('Ocupado', 'Mora')
+        WHERE n.estado IN ('Pendiente de Pago', 'Ocupado', 'Mora')
         ORDER BY n.apellido_difunto NULLS LAST, n.fila, n.columna`,
     );
 
@@ -634,6 +667,7 @@ export class CatastroService {
           : Number(registro.anio_vencimiento);
       const esPerpetuo = registro.es_perpetuo === true;
       const esTemporal = !esPerpetuo;
+      const pendientePago = registro.estado === 'Pendiente de Pago';
       const enMora = registro.estado === 'Mora';
       const vencido =
         esTemporal &&
@@ -648,7 +682,11 @@ export class CatastroService {
       let nivel: 'critico' | 'advertencia' | 'info' | null = null;
       let motivo = '';
 
-      if (enMora || vencido) {
+      if (pendientePago) {
+        nivel = 'advertencia';
+        motivo =
+          'Contrato emitido — Pendiente de confirmación de pago en caja';
+      } else if (enMora || vencido) {
         nivel = 'critico';
         if (enMora && vencido) {
           motivo = `Cuenta en mora y contrato vencido en ${anioVencimiento}`;
@@ -812,14 +850,16 @@ export class CatastroService {
           ? `Temporal hasta ${vencimientoTexto}`
           : 'Temporal';
 
-      // El estado interno "Libre" no se publica; solo se informa deuda o
-      // vigencia de los espacios ocupados.
+      // El estado interno "Libre" no se publica; solo se informa deuda,
+      // pago pendiente en caja o vigencia de los espacios ocupados.
       const estadoCiudadano =
         registro.estado === 'Mora'
           ? 'Con deuda pendiente - Apersonarse a Recaudaciones'
-          : registro.estado === 'Libre'
-            ? null
-            : 'Vigente / Al día';
+          : registro.estado === 'Pendiente de Pago'
+            ? 'Pendiente de pago en Caja'
+            : registro.estado === 'Libre'
+              ? null
+              : 'Vigente / Al día';
 
       return {
         difunto:

@@ -8,8 +8,12 @@ import {
 } from 'typeorm';
 import { PredioNicho } from './predio_nicho.entity';
 
-/** Estados del semáforo de ocupación de un nicho. */
-export type EstadoNicho = 'Libre' | 'Ocupado' | 'Mora';
+/**
+ * Estados del semáforo de ocupación de un nicho.
+ * `Pendiente de Pago` marca un contrato recién emitido que todavía no fue
+ * cancelado en caja; `Ocupado` es el espacio ya cancelado y vigente.
+ */
+export type EstadoNicho = 'Libre' | 'Pendiente de Pago' | 'Ocupado' | 'Mora';
 
 /**
  * Nicho individual dentro de un bloque (predio_nicho).

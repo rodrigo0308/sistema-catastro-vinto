@@ -78,9 +78,11 @@ export class RegistrarDifuntoDto {
   @MaxLength(100)
   resolucion?: string;
 
+  // Si no se envía, el servicio guarda el registro como 'Pendiente de Pago'
+  // hasta que caja confirme la cancelación del contrato.
   @IsOptional()
-  @IsIn(['Ocupado', 'Mora'])
-  estado?: 'Ocupado' | 'Mora';
+  @IsIn(['Pendiente de Pago', 'Ocupado', 'Mora'])
+  estado?: 'Pendiente de Pago' | 'Ocupado' | 'Mora';
 
   @IsOptional()
   @IsIn(['Nicho', 'Mausoleo', 'Camposanto'])

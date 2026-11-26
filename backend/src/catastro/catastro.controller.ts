@@ -16,6 +16,7 @@ import { RegistrarDifuntoDto } from './dto/registrar-difunto.dto';
 import { ActualizarNichoDto } from './dto/actualizar-nicho.dto';
 import { CrearCamposantoDto } from './dto/crear-camposanto.dto';
 import { CrearBloqueDto } from './dto/crear-bloque.dto';
+import { ConfirmarPagoDto } from './dto/confirmar-pago.dto';
 
 /**
  * Geovisor de catastro. Todos los endpoints requieren JWT válido.
@@ -47,6 +48,15 @@ export class CatastroController {
   @Get('bloque/:id/nichos')
   obtenerNichosDeBloque(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.catastroService.obtenerNichosDeBloque(id);
+  }
+
+  // Confirmación de pago en caja: el contrato emitido pasa a Ocupado
+  @Patch('nichos/:id/confirmar-pago')
+  confirmarPago(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() datos: ConfirmarPagoDto,
+  ) {
+    return this.catastroService.confirmarPago(id, datos);
   }
 
   // Edición administrativa de nichos, mausoleos, perpetuos y camposantos

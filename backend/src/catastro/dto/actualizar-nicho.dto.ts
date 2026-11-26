@@ -85,8 +85,8 @@ export class ActualizarNichoDto {
   monto_contrato_bs?: number;
 
   @IsOptional()
-  @IsIn(['Libre', 'Ocupado', 'Mora'])
-  estado?: 'Libre' | 'Ocupado' | 'Mora';
+  @IsIn(['Libre', 'Pendiente de Pago', 'Ocupado', 'Mora'])
+  estado?: 'Libre' | 'Pendiente de Pago' | 'Ocupado' | 'Mora';
 
   @IsOptional()
   @IsString()

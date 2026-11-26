@@ -85,9 +85,10 @@ export class CrearCamposantoDto {
   @MaxLength(100)
   resolucion?: string;
 
+  // Si no se envía, el servicio guarda el sitio como 'Pendiente de Pago'.
   @IsOptional()
-  @IsIn(['Libre', 'Ocupado', 'Mora'])
-  estado?: 'Libre' | 'Ocupado' | 'Mora';
+  @IsIn(['Libre', 'Pendiente de Pago', 'Ocupado', 'Mora'])
+  estado?: 'Libre' | 'Pendiente de Pago' | 'Ocupado' | 'Mora';
 
   @IsOptional()
   @IsInt()
