@@ -54,6 +54,7 @@
                     [(ngModel)]="formulario.tipo_espacio">
                     <option *ngFor="let tipo of tiposEspacio" [value]="tipo">{{ tipo }}</option>
                 </select>
+                <small class="help-text">{{ descripcionTipoEspacio }}</small>
             </div>
         </div>
 
@@ -81,9 +82,9 @@
             </div>
 
             <div class="form-group">
-                <label for="anio_defuncion">Año de Defunción / Entierro</label>
-                <input id="anio_defuncion" name="anio_defuncion" type="number" min="1900" max="2100" step="1"
-                    class="form-control" [(ngModel)]="formulario.anio_defuncion" placeholder="Ej: 2026">
+                <label for="fecha_defuncion">Fecha de Defunción / Entierro</label>
+                <input id="fecha_defuncion" name="fecha_defuncion" type="date" class="form-control"
+                    [(ngModel)]="formulario.fecha_defuncion">
             </div>
         </div>
 
@@ -96,9 +97,7 @@
                     (ngModelChange)="seleccionarRegimen($event)">
                     <option *ngFor="let r of regimenes" [value]="r.etiqueta">{{ r.etiqueta }}</option>
                 </select>
-                <small class="help-text">
-                    Temporal: el precio es el monto global del contrato. Perpetuo: solo mantenimiento anual.
-                </small>
+                <small class="help-text">{{ descripcionRegimen }}</small>
             </div>
 
             <div class="form-group" *ngIf="esPlazoPersonalizado && !formulario.es_perpetuo">
@@ -115,15 +114,11 @@
             </div>
 
             <div class="form-group">
-                <label>Vencimiento del Contrato</label>
-                <div class="valor-calculado">
-                    <ng-container *ngIf="formulario.es_perpetuo">
-                        Perpetuo — sin vencimiento (mantenimiento anual)
-                    </ng-container>
-                    <ng-container *ngIf="!formulario.es_perpetuo">
-                        {{ anioVencimiento ? ('Año ' + anioVencimiento) : 'Indique el plazo y el año de defunción' }}
-                    </ng-container>
-                </div>
+                <label>Fecha de Vencimiento del Contrato</label>
+                <div class="valor-calculado">{{ fechaVencimientoTexto }}</div>
+                <small class="help-text">
+                    Se calcula sumando los años del plazo a la fecha de defunción, conservando el mismo día y mes.
+                </small>
             </div>
         </div>
 
@@ -146,7 +141,14 @@
             <div class="form-group">
                 <label for="resolucion">N° de Resolución Administrativa (RA.)</label>
                 <input id="resolucion" name="resolucion" type="text" class="form-control"
-                    [(ngModel)]="formulario.resolucion" placeholder="Ej: RA. 045/2026" autocomplete="off">
+                    [(ngModel)]="formulario.resolucion" [disabled]="!formulario.es_perpetuo"
+                    [placeholder]="formulario.es_perpetuo ? 'Ej: RA. 045/2026' : 'No aplica'">
+                <small class="help-text" *ngIf="!formulario.es_perpetuo">
+                    No aplica — exclusivo para concesiones perpetuas
+                </small>
+                <small class="help-text" *ngIf="formulario.es_perpetuo">
+                    Obligatoria para el régimen perpetuo.
+                </small>
             </div>
 
             <div class="form-group">

@@ -157,6 +157,7 @@
                 <p><b>Difunto:</b> {{ nombreDifunto(n) }}</p>
                 <p><b>Solicitante:</b> {{ n.solicitante || 'Sin registro' }}</p>
                 <p><b>Tipo de Espacio:</b> {{ n.tipo_espacio || 'Nicho' }}</p>
+                <p><b>Entierro:</b> {{ fechaNicho(n) || 'Sin registro' }}</p>
                 <p><b>Régimen / Vencimiento:</b> {{ regimenNicho(n) }}</p>
                 <p><b>Resolución:</b> {{ n.resolucion || 'Sin registro' }}</p>
 
@@ -181,8 +182,15 @@
                     *ngIf="n.estado === 'Ocupado' || n.estado === 'Mora'"
                     (click)="pagarMantenimiento(n)"
                 >
-                    Pagar Mantenimiento / Regularizar
+                    {{ esMausoleoOPerpetuo(n) ? 'Pagar Mantenimiento Anual' : 'Regularizar / Renovar Contrato' }}
                 </button>
+
+                <small
+                    class="nota-mantenimiento"
+                    *ngIf="(n.estado === 'Ocupado' || n.estado === 'Mora') && !esMausoleoOPerpetuo(n)"
+                >
+                    El mantenimiento anual aplica solo a mausoleos y concesiones perpetuas.
+                </small>
             </div>
 
             <p class="panel-vacio" *ngIf="!cargandoPanel && !errorPanel && panel && panel.nichos.length === 0">
@@ -220,9 +228,12 @@
                             [(ngModel)]="formularioNicho.nombres" autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="edit-anio">Año de Defunción</label>
-                        <input id="edit-anio" type="number" min="1900" max="2100" class="form-control"
-                            [(ngModel)]="formularioNicho.anio_defuncion">
+                        <label for="edit-fecha">Fecha de Defunción / Entierro</label>
+                        <input id="edit-fecha" type="date" class="form-control"
+                            [(ngModel)]="formularioNicho.fecha_defuncion">
+                        <small class="help-text" *ngIf="!formularioNicho.fecha_defuncion && celdaSeleccionada?.anio_defuncion">
+                            Registro histórico: año {{ celdaSeleccionada?.anio_defuncion }}.
+                        </small>
                     </div>
                     <div class="form-group">
                         <label for="edit-solicitante">Solicitante</label>
@@ -235,17 +246,22 @@
                             [(ngModel)]="formularioNicho.telefono_solicitante" autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="edit-resolucion">Resolución</label>
+                        <label for="edit-resolucion">N° de Resolución Administrativa (RA.)</label>
                         <input id="edit-resolucion" type="text" class="form-control"
-                            [(ngModel)]="formularioNicho.resolucion" autocomplete="off">
+                            [(ngModel)]="formularioNicho.resolucion"
+                            [disabled]="!formularioNicho.es_perpetuo" autocomplete="off">
+                        <small class="help-text" *ngIf="!formularioNicho.es_perpetuo">
+                            No aplica — exclusivo para concesiones perpetuas
+                        </small>
                     </div>
                     <div class="form-group">
                         <label for="edit-tipo">Tipo de Espacio</label>
                         <select id="edit-tipo" class="form-control" [(ngModel)]="formularioNicho.tipo_espacio">
-                            <option value="Nicho">Nicho</option>
-                            <option value="Mausoleo">Mausoleo</option>
+                            <option value="Nicho">Nicho en Bloque Municipal</option>
+                            <option value="Mausoleo">Mausoleo Familiar</option>
                             <option value="Camposanto">Camposanto</option>
                         </select>
+                        <small class="help-text">{{ descripcionTipoEspacio(formularioNicho.tipo_espacio) }}</small>
                     </div>
                     <div class="form-group">
                         <label for="edit-estado">Estado</label>
@@ -262,6 +278,13 @@
                             [disabled]="formularioNicho.es_perpetuo">
                     </div>
                     <div class="form-group">
+                        <label>Fecha de Vencimiento del Contrato</label>
+                        <div class="valor-calculado">{{ fechaVencimientoEdicionTexto }}</div>
+                        <small class="help-text">
+                            Mismo día y mes del entierro, más los años del plazo.
+                        </small>
+                    </div>
+                    <div class="form-group">
                         <label for="edit-monto">Monto del Contrato (Bs.)</label>
                         <input id="edit-monto" type="number" min="0" step="0.01" class="form-control"
                             [(ngModel)]="formularioNicho.monto_contrato_bs">
@@ -271,6 +294,11 @@
                             <input type="checkbox" [(ngModel)]="formularioNicho.es_perpetuo">
                             Régimen perpetuo
                         </label>
+                        <small class="help-text">
+                            {{ formularioNicho.es_perpetuo
+                                ? 'Perpetuo: sin vencimiento; exige RA. y mantenimiento anual.'
+                                : 'Temporal: contrato con plazo y fecha de vencimiento.' }}
+                        </small>
                     </div>
                     <div class="form-group" *ngIf="formularioNicho.tipo_espacio === 'Camposanto'">
                         <label for="edit-sector">Sector del Camposanto</label>

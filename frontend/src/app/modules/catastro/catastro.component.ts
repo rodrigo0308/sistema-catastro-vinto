@@ -25,6 +25,32 @@ const PERIMETRO_URL = 'assets/cementerio_perimetro.geojson';
 /** Paleta de la máscara exterior: oscurece todo lo que queda fuera del cementerio. */
 const MASCARA_COLOR = '#0f172a';
 
+/** Suma años a una fecha ISO conservando el mismo día y mes. */
+function sumarAniosFecha(fecha: string, anios: number): string | null {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec((fecha ?? '').trim());
+  const plazo = Math.trunc(Number(anios));
+
+  if (!partes || !Number.isFinite(plazo) || plazo < 1) {
+    return null;
+  }
+
+  const anio = Number(partes[1]) + plazo;
+  const mes = Number(partes[2]);
+  const dia = Number(partes[3]);
+  const ultimoDia = new Date(anio, mes, 0).getDate();
+  const diaDestino = Math.min(dia, ultimoDia);
+
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(
+    diaDestino,
+  ).padStart(2, '0')}`;
+}
+
+/** DD/MM/YYYY para mostrar en pantalla. */
+function formatearFechaCorta(fecha: string): string {
+  const [anio, mes, dia] = fecha.split('-');
+  return `${dia}/${mes}/${anio}`;
+}
+
 type EstadoNicho = 'Libre' | 'Ocupado' | 'Mora';
 
 interface Nicho {
@@ -41,6 +67,8 @@ interface Nicho {
   plazo_anios: number | null;
   es_perpetuo: boolean;
   anio_vencimiento: number | null;
+  fecha_defuncion?: string | null;
+  fecha_vencimiento?: string | null;
   monto_contrato_bs: number | null;
   apellido_paterno?: string | null;
   apellido_materno?: string | null;
@@ -56,7 +84,7 @@ interface FormularioNicho {
   apellido_paterno: string;
   apellido_materno: string;
   nombres: string;
-  anio_defuncion: number | null;
+  fecha_defuncion: string;
   solicitante: string;
   telefono_solicitante: string;
   resolucion: string;
@@ -650,7 +678,7 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     return [nombres, ...faltantes].join(' ').replace(/\s+/g, ' ').trim();
   }
 
-  /** Régimen del espacio: perpetuo, plazo en años y año de vencimiento. */
+  /** Régimen del espacio: perpetuo, plazo en años y fecha de vencimiento. */
   regimenNicho(nicho: Nicho | null): string {
     if (!nicho) {
       return 'Sin registro';
@@ -667,11 +695,66 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     if (Number.isFinite(plazo) && plazo > 0) {
       partes.push(`${Math.trunc(plazo)} años`);
     }
-    if (Number.isFinite(vencimiento) && vencimiento > 0) {
+    if (nicho.fecha_vencimiento) {
+      partes.push(`vence el ${formatearFechaCorta(nicho.fecha_vencimiento)}`);
+    } else if (Number.isFinite(vencimiento) && vencimiento > 0) {
       partes.push(`vence el año ${Math.trunc(vencimiento)}`);
     }
 
     return partes.length > 0 ? partes.join(' — ') : 'Sin plazo definido';
+  }
+
+  /** Fecha de entierro para mostrar: DD/MM/YYYY o el año histórico. */
+  fechaNicho(nicho: Nicho | null): string {
+    if (!nicho) {
+      return '';
+    }
+    if (nicho.fecha_defuncion) {
+      return formatearFechaCorta(nicho.fecha_defuncion);
+    }
+    return nicho.anio_defuncion ? String(nicho.anio_defuncion) : '';
+  }
+
+  /** El mantenimiento anual solo corresponde a mausoleos y perpetuos. */
+  esMausoleoOPerpetuo(nicho: Nicho | null): boolean {
+    return (
+      !!nicho && (nicho.tipo_espacio === 'Mausoleo' || nicho.es_perpetuo === true)
+    );
+  }
+
+  /** Subtítulo aclaratorio del tipo de espacio en el modal de edición. */
+  descripcionTipoEspacio(tipo: string | null): string {
+    if (tipo === 'Mausoleo') {
+      return 'Mausoleo Familiar: terreno adquirido con construcción privada (sujeto a mantenimiento anual).';
+    }
+    if (tipo === 'Camposanto') {
+      return 'Camposanto: sepultura individual en suelo natural.';
+    }
+    return 'Nicho en Bloque Municipal: compartimento en pabellón municipal.';
+  }
+
+  /** Vencimiento ISO calculado en la edición (mismo día y mes + plazo). */
+  get fechaVencimientoEdicion(): string | null {
+    if (this.formularioNicho.es_perpetuo) {
+      return null;
+    }
+
+    return sumarAniosFecha(
+      this.formularioNicho.fecha_defuncion,
+      Number(this.formularioNicho.plazo_anios),
+    );
+  }
+
+  /** Texto de pantalla del vencimiento en la edición. */
+  get fechaVencimientoEdicionTexto(): string {
+    if (this.formularioNicho.es_perpetuo) {
+      return 'Sin vencimiento (Perpetuo)';
+    }
+
+    const fecha = this.fechaVencimientoEdicion;
+    return fecha
+      ? formatearFechaCorta(fecha)
+      : 'Indique la fecha de defunción y el plazo';
   }
 
   esResaltado(nicho: Nicho | null): boolean {
@@ -829,7 +912,7 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
       apellido_paterno: '',
       apellido_materno: '',
       nombres: '',
-      anio_defuncion: null,
+      fecha_defuncion: '',
       solicitante: '',
       telefono_solicitante: '',
       resolucion: '',
@@ -867,7 +950,7 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
       apellido_paterno: nicho.apellido_paterno ?? '',
       apellido_materno: nicho.apellido_materno ?? '',
       nombres: nicho.nombres ?? nicho.nombre_difunto ?? '',
-      anio_defuncion: nicho.anio_defuncion ?? null,
+      fecha_defuncion: nicho.fecha_defuncion ?? '',
       solicitante: nicho.solicitante ?? '',
       telefono_solicitante: nicho.telefono_solicitante ?? '',
       resolucion: nicho.resolucion ?? '',
@@ -905,6 +988,12 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    if (formulario.es_perpetuo && !formulario.resolucion.trim()) {
+      this.errorEdicion =
+        'La N° de Resolución Administrativa (RA.) es obligatoria para concesiones perpetuas.';
+      return;
+    }
+
     this.guardandoEdicion = true;
     this.errorEdicion = '';
 
@@ -913,10 +1002,12 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
         apellido_paterno: formulario.apellido_paterno.trim(),
         apellido_materno: formulario.apellido_materno.trim(),
         nombres: formulario.nombres.trim(),
-        anio_defuncion: this.aNumero(formulario.anio_defuncion),
+        fecha_defuncion: formulario.fecha_defuncion || null,
         solicitante: formulario.solicitante.trim(),
         telefono_solicitante: formulario.telefono_solicitante.trim(),
-        resolucion: formulario.resolucion.trim(),
+        resolucion: formulario.es_perpetuo
+          ? formulario.resolucion.trim()
+          : null,
         tipo_espacio: formulario.tipo_espacio,
         estado: formulario.estado,
         es_perpetuo: formulario.es_perpetuo,

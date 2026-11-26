@@ -26,6 +26,40 @@ interface RegimenContrato {
   perpetuo: boolean;
 }
 
+/** Fecha ISO (YYYY-MM-DD) de hoy según la hora local del funcionario. */
+function fechaHoy(): string {
+  const hoy = new Date();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+}
+
+/** Suma años conservando el mismo día y mes (29/02 se ajusta a fin de mes). */
+function sumarAnios(fecha: string, anios: number): string | null {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec((fecha ?? '').trim());
+  const plazo = Math.trunc(Number(anios));
+
+  if (!partes || !Number.isFinite(plazo) || plazo < 1) {
+    return null;
+  }
+
+  const anio = Number(partes[1]) + plazo;
+  const mes = Number(partes[2]);
+  const dia = Number(partes[3]);
+  const ultimoDia = new Date(anio, mes, 0).getDate();
+  const diaDestino = Math.min(dia, ultimoDia);
+
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(
+    diaDestino,
+  ).padStart(2, '0')}`;
+}
+
+/** DD/MM/YYYY para mostrar en pantalla. */
+function formatearFecha(fecha: string): string {
+  const [anio, mes, dia] = fecha.split('-');
+  return `${dia}/${mes}/${anio}`;
+}
+
 @Component({
   selector: 'app-registro-difuntos',
   standalone: true,
@@ -75,7 +109,7 @@ export class RegistroDifuntosComponent implements OnInit {
     apellido_paterno: '',
     apellido_materno: '',
     nombres: '',
-    anio_defuncion: new Date().getFullYear() as number | null,
+    fecha_defuncion: fechaHoy(),
     solicitante: '',
     telefono_solicitante: '',
     resolucion: '',
@@ -123,23 +157,52 @@ export class RegistroDifuntosComponent implements OnInit {
     return this.formulario.regimen.includes('Personalizado');
   }
 
-  /** Vencimiento calculado a partir del año de defunción y el plazo. */
-  get anioVencimiento(): number | null {
+  /** Fecha de vencimiento ISO: mismo día y mes, más los años del plazo. */
+  get fechaVencimiento(): string | null {
     if (this.formulario.es_perpetuo) {
       return null;
     }
 
-    const plazo = Number(this.formulario.plazo_anios);
-    const anio = Number(this.formulario.anio_defuncion);
+    return sumarAnios(
+      this.formulario.fecha_defuncion,
+      Number(this.formulario.plazo_anios),
+    );
+  }
 
-    if (!Number.isFinite(plazo) || plazo < 1) {
-      return null;
-    }
-    if (!Number.isFinite(anio) || anio < 1900) {
-      return null;
+  /** Texto de pantalla del vencimiento: DD/MM/YYYY o perpetuo. */
+  get fechaVencimientoTexto(): string {
+    if (this.formulario.es_perpetuo) {
+      return 'Sin vencimiento (Perpetuo)';
     }
 
-    return Math.trunc(anio) + Math.trunc(plazo);
+    const fecha = this.fechaVencimiento;
+    return fecha
+      ? formatearFecha(fecha)
+      : 'Indique la fecha de defunción y el plazo';
+  }
+
+  /** Año de vencimiento, para el contrato en el módulo tributario. */
+  get anioVencimiento(): number | null {
+    const fecha = this.fechaVencimiento;
+    return fecha ? Number(fecha.slice(0, 4)) : null;
+  }
+
+  /** Subtítulo aclaratorio del tipo de espacio elegido. */
+  get descripcionTipoEspacio(): string {
+    if (this.formulario.tipo_espacio === 'Mausoleo') {
+      return 'Mausoleo Familiar: terreno adquirido con construcción privada (sujeto a mantenimiento anual).';
+    }
+    if (this.formulario.tipo_espacio === 'Camposanto') {
+      return 'Camposanto: sepultura individual en suelo natural.';
+    }
+    return 'Nicho en Bloque Municipal: compartimento en pabellón municipal.';
+  }
+
+  /** Subtítulo aclaratorio del régimen y de la Resolución Administrativa. */
+  get descripcionRegimen(): string {
+    return this.formulario.es_perpetuo
+      ? 'Perpetuo: sin vencimiento; exige Resolución Administrativa (RA.) y mantenimiento anual de 25 Bs./año.'
+      : 'Temporal: contrato con plazo y fecha de vencimiento; no lleva RA. Al concluir el plazo se renueva el contrato.';
   }
 
   private cargarBloques(): void {
@@ -181,6 +244,9 @@ export class RegistroDifuntosComponent implements OnInit {
       return;
     }
 
+    // La RA. es exclusiva de las concesiones perpetuas.
+    this.formulario.resolucion = '';
+
     if (item.plazo !== null) {
       this.formulario.plazo_anios = item.plazo;
       this.formulario.monto_contrato_bs = item.monto;
@@ -214,12 +280,21 @@ export class RegistroDifuntosComponent implements OnInit {
       this.error = 'Los nombres del difunto son obligatorios.';
       return;
     }
+    if (!this.formulario.fecha_defuncion) {
+      this.error = 'Indique la fecha de defunción o entierro.';
+      return;
+    }
     if (!this.formulario.es_perpetuo) {
       const plazo = Number(this.formulario.plazo_anios);
       if (!Number.isFinite(plazo) || plazo < 1) {
         this.error = 'Indique el plazo del contrato en años (mayor a 0).';
         return;
       }
+    }
+    if (this.formulario.es_perpetuo && !this.formulario.resolucion.trim()) {
+      this.error =
+        'La N° de Resolución Administrativa (RA.) es obligatoria para concesiones perpetuas.';
+      return;
     }
     if (
       this.formulario.monto_contrato_bs !== null &&
@@ -236,13 +311,14 @@ export class RegistroDifuntosComponent implements OnInit {
       apellido_paterno: this.formulario.apellido_paterno.trim(),
       apellido_materno: this.formulario.apellido_materno.trim() || undefined,
       nombres: this.formulario.nombres.trim(),
-      anio_defuncion: this.formulario.anio_defuncion
-        ? Number(this.formulario.anio_defuncion)
-        : undefined,
+      fecha_defuncion: this.formulario.fecha_defuncion || undefined,
+      fecha_vencimiento: this.fechaVencimiento ?? undefined,
       solicitante: this.formulario.solicitante.trim() || undefined,
       telefono_solicitante:
         this.formulario.telefono_solicitante.trim() || undefined,
-      resolucion: this.formulario.resolucion.trim() || undefined,
+      resolucion: this.formulario.es_perpetuo
+        ? this.formulario.resolucion.trim() || undefined
+        : undefined,
       estado: this.formulario.estado,
       tipo_espacio: this.formulario.tipo_espacio,
       plazo_anios: this.formulario.es_perpetuo
@@ -341,7 +417,7 @@ export class RegistroDifuntosComponent implements OnInit {
     this.formulario.apellido_paterno = '';
     this.formulario.apellido_materno = '';
     this.formulario.nombres = '';
-    this.formulario.anio_defuncion = new Date().getFullYear();
+    this.formulario.fecha_defuncion = fechaHoy();
     this.formulario.solicitante = '';
     this.formulario.telefono_solicitante = '';
     this.formulario.resolucion = '';

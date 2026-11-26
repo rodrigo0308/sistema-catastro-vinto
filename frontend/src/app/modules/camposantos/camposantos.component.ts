@@ -8,6 +8,40 @@ const API_URL = 'http://localhost:3000';
 
 type EstadoCamposanto = 'Libre' | 'Ocupado' | 'Mora';
 
+/** Fecha ISO (YYYY-MM-DD) de hoy según la hora local. */
+function fechaHoy(): string {
+  const hoy = new Date();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+}
+
+/** Suma años conservando el mismo día y mes (29/02 se ajusta a fin de mes). */
+function sumarAnios(fecha: string, anios: number): string | null {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec((fecha ?? '').trim());
+  const plazo = Math.trunc(Number(anios));
+
+  if (!partes || !Number.isFinite(plazo) || plazo < 1) {
+    return null;
+  }
+
+  const anio = Number(partes[1]) + plazo;
+  const mes = Number(partes[2]);
+  const dia = Number(partes[3]);
+  const ultimoDia = new Date(anio, mes, 0).getDate();
+  const diaDestino = Math.min(dia, ultimoDia);
+
+  return `${anio}-${String(mes).padStart(2, '0')}-${String(
+    diaDestino,
+  ).padStart(2, '0')}`;
+}
+
+/** DD/MM/YYYY para mostrar en pantalla. */
+function formatearFechaCorta(fecha: string): string {
+  const [anio, mes, dia] = fecha.split('-');
+  return `${dia}/${mes}/${anio}`;
+}
+
 interface Camposanto {
   id: string;
   predio_id: string;
@@ -21,6 +55,8 @@ interface Camposanto {
   nombre_difunto: string | null;
   apellido_difunto: string | null;
   anio_defuncion: number | null;
+  fecha_defuncion: string | null;
+  fecha_vencimiento: string | null;
   solicitante: string | null;
   telefono_solicitante: string | null;
   resolucion: string | null;
@@ -40,7 +76,7 @@ interface FormularioCamposanto {
   apellido_paterno: string;
   apellido_materno: string;
   nombres: string;
-  anio_defuncion: number | null;
+  fecha_defuncion: string;
   solicitante: string;
   telefono_solicitante: string;
   resolucion: string;
@@ -96,7 +132,7 @@ export class CamposantosComponent implements OnInit {
       apellido_paterno: '',
       apellido_materno: '',
       nombres: '',
-      anio_defuncion: null,
+      fecha_defuncion: fechaHoy(),
       solicitante: '',
       telefono_solicitante: '',
       resolucion: '',
@@ -182,7 +218,7 @@ export class CamposantosComponent implements OnInit {
       apellido_paterno: registro.apellido_paterno ?? '',
       apellido_materno: registro.apellido_materno ?? '',
       nombres: registro.nombres ?? '',
-      anio_defuncion: registro.anio_defuncion ?? null,
+      fecha_defuncion: registro.fecha_defuncion ?? '',
       solicitante: registro.solicitante ?? '',
       telefono_solicitante: registro.telefono_solicitante ?? '',
       resolucion: registro.resolucion ?? '',
@@ -215,9 +251,25 @@ export class CamposantosComponent implements OnInit {
       return;
     }
 
+    if ((apellido || nombres) && !datos.fecha_defuncion) {
+      this.errorFormulario =
+        'Indique la fecha de defunción o entierro del difunto.';
+      return;
+    }
+
     if (!datos.es_perpetuo && datos.plazo_anios === null) {
       this.errorFormulario =
         'Indique el plazo en años o marque el régimen perpetuo.';
+      return;
+    }
+
+    if (
+      datos.es_perpetuo &&
+      (apellido || nombres) &&
+      !datos.resolucion.trim()
+    ) {
+      this.errorFormulario =
+        'La N° de Resolución Administrativa (RA.) es obligatoria para concesiones perpetuas.';
       return;
     }
 
@@ -262,16 +314,49 @@ export class CamposantosComponent implements OnInit {
       apellido_paterno: datos.apellido_paterno.trim(),
       apellido_materno: datos.apellido_materno.trim(),
       nombres: datos.nombres.trim(),
-      anio_defuncion: numero(datos.anio_defuncion),
+      fecha_defuncion: datos.fecha_defuncion || null,
+      fecha_vencimiento: this.fechaVencimiento,
       solicitante: datos.solicitante.trim(),
       telefono_solicitante: datos.telefono_solicitante.trim(),
-      resolucion: datos.resolucion.trim(),
+      resolucion: datos.es_perpetuo ? datos.resolucion.trim() : null,
       estado: datos.estado,
       es_perpetuo: datos.es_perpetuo,
       plazo_anios: datos.es_perpetuo ? null : numero(datos.plazo_anios),
       monto_contrato_bs: numero(datos.monto_contrato_bs),
       observaciones: datos.observaciones.trim(),
     };
+  }
+
+  /** Fecha de vencimiento ISO: mismo día y mes, más los años del plazo. */
+  get fechaVencimiento(): string | null {
+    if (this.formulario.es_perpetuo) {
+      return null;
+    }
+
+    return sumarAnios(
+      this.formulario.fecha_defuncion,
+      Number(this.formulario.plazo_anios),
+    );
+  }
+
+  /** Texto de pantalla del vencimiento: DD/MM/YYYY o perpetuo. */
+  get fechaVencimientoTexto(): string {
+    if (this.formulario.es_perpetuo) {
+      return 'Sin vencimiento (Perpetuo)';
+    }
+
+    const fecha = this.fechaVencimiento;
+    return fecha
+      ? formatearFechaCorta(fecha)
+      : 'Indique la fecha de entierro y el plazo';
+  }
+
+  /** Fecha de entierro para mostrar: DD/MM/YYYY o el año histórico. */
+  fechaEntierro(registro: Camposanto): string {
+    if (registro.fecha_defuncion) {
+      return formatearFechaCorta(registro.fecha_defuncion);
+    }
+    return registro.anio_defuncion ? String(registro.anio_defuncion) : '';
   }
 
   /** Redirige a Recaudación con los datos del titular, difunto y ubicación. */
@@ -318,7 +403,9 @@ export class CamposantosComponent implements OnInit {
     if (Number.isFinite(plazo) && plazo > 0) {
       partes.push(`${Math.trunc(plazo)} años`);
     }
-    if (Number.isFinite(vencimiento) && vencimiento > 0) {
+    if (registro.fecha_vencimiento) {
+      partes.push(`vence el ${formatearFechaCorta(registro.fecha_vencimiento)}`);
+    } else if (Number.isFinite(vencimiento) && vencimiento > 0) {
       partes.push(`vence el año ${Math.trunc(vencimiento)}`);
     }
 

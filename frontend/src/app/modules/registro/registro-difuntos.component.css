@@ -68,6 +68,12 @@ h4:not(:first-child) {
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
 }
 
+.form-control:disabled {
+    background: #eef1f4;
+    color: #7f8c8d;
+    cursor: not-allowed;
+}
+
 .btn-guardar {
     width: 100%;
     margin-top: 18px;

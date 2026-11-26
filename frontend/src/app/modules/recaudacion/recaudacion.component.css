@@ -101,6 +101,17 @@ h4:not(:first-child) {
     font-size: 0.78em;
 }
 
+.nota-tarifario {
+    margin-bottom: 14px;
+    padding: 9px 11px;
+    background: #fff8e6;
+    border-left: 3px solid #d97706;
+    border-radius: 4px;
+    color: #7c4a03;
+    font-size: 0.8em;
+    line-height: 1.4;
+}
+
 .costo-preview {
     margin-bottom: 14px;
     padding: 8px 10px;

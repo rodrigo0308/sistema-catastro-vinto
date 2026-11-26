@@ -69,9 +69,9 @@
             </div>
 
             <div class="form-group">
-                <label for="anio_defuncion">Año de Defunción / Entierro</label>
-                <input id="anio_defuncion" name="anio_defuncion" type="number" min="1900" max="2100" step="1"
-                    class="form-control" [(ngModel)]="formulario.anio_defuncion" placeholder="Ej: 2026">
+                <label for="fecha_defuncion">Fecha de Defunción / Entierro</label>
+                <input id="fecha_defuncion" name="fecha_defuncion" type="date" class="form-control"
+                    [(ngModel)]="formulario.fecha_defuncion">
             </div>
         </div>
 
@@ -92,9 +92,13 @@
             </div>
 
             <div class="form-group">
-                <label for="resolucion">N° de Resolución Administrativa</label>
+                <label for="resolucion">N° de Resolución Administrativa (RA.)</label>
                 <input id="resolucion" name="resolucion" type="text" class="form-control"
-                    [(ngModel)]="formulario.resolucion" placeholder="Ej: RA. 045/2026" autocomplete="off">
+                    [(ngModel)]="formulario.resolucion" [disabled]="!formulario.es_perpetuo"
+                    [placeholder]="formulario.es_perpetuo ? 'Ej: RA. 045/2026' : 'No aplica'" autocomplete="off">
+                <small class="help-text" *ngIf="!formulario.es_perpetuo">
+                    No aplica — exclusivo para concesiones perpetuas
+                </small>
             </div>
 
             <div class="form-group">
@@ -102,6 +106,14 @@
                 <input id="plazo_campo" name="plazo_campo" type="number" min="1" step="1" class="form-control"
                     [(ngModel)]="formulario.plazo_anios" [disabled]="formulario.es_perpetuo"
                     placeholder="Ej: 5">
+            </div>
+
+            <div class="form-group">
+                <label>Fecha de Vencimiento del Contrato</label>
+                <div class="valor-calculado">{{ fechaVencimientoTexto }}</div>
+                <small class="help-text">
+                    Mismo día y mes del entierro, más los años del plazo.
+                </small>
             </div>
 
             <div class="form-group">
@@ -115,6 +127,10 @@
                     <input type="checkbox" name="es_perpetuo" [(ngModel)]="formulario.es_perpetuo">
                     Régimen perpetuo (sin vencimiento)
                 </label>
+                <small class="help-text">
+                    Perpetuo: sin vencimiento, exige RA. y mantenimiento anual (25 Bs./año).
+                    Temporal: contrato con plazo y fecha de vencimiento.
+                </small>
             </div>
         </div>
 
@@ -172,7 +188,7 @@
                     </td>
                     <td>
                         {{ nombreDifunto(registro) }}
-                        <small *ngIf="registro.anio_defuncion">Entierro: {{ registro.anio_defuncion }}</small>
+                        <small *ngIf="fechaEntierro(registro)">Entierro: {{ fechaEntierro(registro) }}</small>
                     </td>
                     <td>
                         {{ registro.solicitante || 'Sin registro' }}

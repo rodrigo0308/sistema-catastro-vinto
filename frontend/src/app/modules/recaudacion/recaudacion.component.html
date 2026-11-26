@@ -55,6 +55,12 @@
                 <small class="help-text">{{ notaConcepto }}</small>
             </div>
 
+            <div class="nota-tarifario">
+                <strong>Mantenimiento anual:</strong> las tasas de 60 Bs./año (Mausoleo) y
+                25 Bs./año (Perpetuo) aplican exclusivamente a mausoleos y concesiones
+                perpetuas. Los nichos temporales se regularizan renovando su contrato.
+            </div>
+
             <div class="form-group" [class.campo-mantenimiento]="desdeMantenimiento" *ngIf="modoActual !== 'contrato'">
                 <label>Gestiones / Años a pagar</label>
                 <input #gestionesInput type="number" min="1" step="1" [(ngModel)]="gestiones" class="form-control"
