@@ -55,6 +55,16 @@ export class Nicho {
   @Column({ type: 'int', nullable: true })
   anio_defuncion!: number | null;
 
+  // Fecha completa ISO (YYYY-MM-DD). Los registros históricos solo tienen año;
+  // anio_defuncion se mantiene sincronizado para no romperlos.
+  @Column({
+    name: 'fecha_defuncion',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  fecha_defuncion!: string | null;
+
   @Column({ type: 'varchar', length: 20, nullable: true })
   telefono_solicitante!: string | null;
 
@@ -81,6 +91,15 @@ export class Nicho {
   // Calculado automáticamente: anio_defuncion + plazo_anios.
   @Column({ name: 'anio_vencimiento', type: 'int', nullable: true })
   anio_vencimiento!: number | null;
+
+  // Fecha completa ISO del vencimiento; se sincroniza con anio_vencimiento.
+  @Column({
+    name: 'fecha_vencimiento',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  fecha_vencimiento!: string | null;
 
   // Precio acordado por el encargado para el contrato.
   @Column({

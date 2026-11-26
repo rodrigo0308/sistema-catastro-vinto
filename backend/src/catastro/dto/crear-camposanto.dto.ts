@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -54,6 +55,20 @@ export class CrearCamposantoDto {
   @IsInt()
   @Min(1900)
   anio_defuncion?: number;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'La fecha de defunción debe tener formato YYYY-MM-DD.',
+  })
+  fecha_defuncion?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'La fecha de vencimiento debe tener formato YYYY-MM-DD.',
+  })
+  fecha_vencimiento?: string;
 
   @IsOptional()
   @IsString()

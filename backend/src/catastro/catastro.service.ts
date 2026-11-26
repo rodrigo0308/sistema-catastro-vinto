@@ -168,25 +168,38 @@ export class CatastroService {
     nicho.nombres = nombres;
     nicho.apellido_difunto = apellidoCompleto;
     nicho.nombre_difunto = nombres;
-    nicho.anio_defuncion = datos.anio_defuncion ?? null;
-    nicho.solicitante = datos.solicitante?.trim() || null;
-    nicho.telefono_solicitante = datos.telefono_solicitante?.trim() || null;
-    nicho.resolucion = datos.resolucion?.trim() || null;
-    nicho.estado = datos.estado ?? 'Ocupado';
 
     // Condiciones del contrato: el plazo es libre y el monto lo fija el
-    // encargado. Si es perpetuo no hay plazo ni año de vencimiento.
+    // encargado. Si es perpetuo no hay plazo ni vencimiento.
     const esPerpetuo = datos.es_perpetuo === true;
     const plazoAnios = esPerpetuo ? null : (datos.plazo_anios ?? null);
-    const anioDefuncion = datos.anio_defuncion ?? null;
+    const fechaDefuncion = this.normalizarFecha(datos.fecha_defuncion);
+    const anioDefuncion =
+      this.anioDeFecha(fechaDefuncion) ?? (datos.anio_defuncion ?? null);
+    const fechaVencimiento = esPerpetuo
+      ? null
+      : (this.normalizarFecha(datos.fecha_vencimiento) ??
+        (fechaDefuncion && plazoAnios !== null
+          ? this.sumarAnios(fechaDefuncion, plazoAnios)
+          : null));
+
+    nicho.fecha_defuncion = fechaDefuncion;
+    nicho.anio_defuncion = anioDefuncion;
+    nicho.solicitante = datos.solicitante?.trim() || null;
+    nicho.telefono_solicitante = datos.telefono_solicitante?.trim() || null;
+    // La Resolución Administrativa (RA.) solo corresponde a perpetuos.
+    nicho.resolucion = esPerpetuo ? datos.resolucion?.trim() || null : null;
+    nicho.estado = datos.estado ?? 'Ocupado';
 
     nicho.tipo_espacio = datos.tipo_espacio ?? 'Nicho';
     nicho.es_perpetuo = esPerpetuo;
     nicho.plazo_anios = plazoAnios;
+    nicho.fecha_vencimiento = fechaVencimiento;
     nicho.anio_vencimiento =
-      !esPerpetuo && plazoAnios !== null && anioDefuncion !== null
+      this.anioDeFecha(fechaVencimiento) ??
+      (!esPerpetuo && plazoAnios !== null && anioDefuncion !== null
         ? anioDefuncion + plazoAnios
-        : null;
+        : null);
     nicho.monto_contrato_bs = datos.monto_contrato_bs ?? null;
 
     return this.nichoRepository.save(nicho);
@@ -229,6 +242,8 @@ export class CatastroService {
       tipo_espacio: string | null;
       plazo_anios: number | string | null;
       es_perpetuo: boolean | null;
+      fecha_defuncion: string | null;
+      fecha_vencimiento: string | null;
       anio_vencimiento: number | string | null;
       monto_contrato_bs: number | string | null;
       centro_lat: number;
@@ -255,6 +270,8 @@ export class CatastroService {
          n.tipo_espacio,
          n.plazo_anios,
          n.es_perpetuo,
+         n.fecha_defuncion,
+         n.fecha_vencimiento,
          n.anio_vencimiento,
          n.monto_contrato_bs,
          ST_Y(ST_Centroid(p.poligono)) AS centro_lat,
@@ -285,6 +302,8 @@ export class CatastroService {
       tipo_espacio: r.tipo_espacio ?? 'Nicho',
       plazo_anios: r.plazo_anios === null ? null : Number(r.plazo_anios),
       es_perpetuo: r.es_perpetuo === true,
+      fecha_defuncion: this.normalizarFecha(r.fecha_defuncion),
+      fecha_vencimiento: this.normalizarFecha(r.fecha_vencimiento),
       anio_vencimiento:
         r.anio_vencimiento === null ? null : Number(r.anio_vencimiento),
       monto_contrato_bs:
@@ -323,8 +342,18 @@ export class CatastroService {
     if (datos.nombres !== undefined) {
       nicho.nombres = this.limpiarTexto(datos.nombres);
     }
-    if (datos.anio_defuncion !== undefined) {
+    if (datos.fecha_defuncion !== undefined) {
+      nicho.fecha_defuncion = this.normalizarFecha(datos.fecha_defuncion);
+    }
+    if (nicho.fecha_defuncion) {
+      // El año siempre se extrae de la fecha completa cuando existe.
+      nicho.anio_defuncion =
+        this.anioDeFecha(nicho.fecha_defuncion) ?? nicho.anio_defuncion;
+    } else if (datos.anio_defuncion !== undefined) {
       nicho.anio_defuncion = datos.anio_defuncion ?? null;
+    }
+    if (datos.fecha_vencimiento !== undefined) {
+      nicho.fecha_vencimiento = this.normalizarFecha(datos.fecha_vencimiento);
     }
     if (datos.solicitante !== undefined) {
       nicho.solicitante = this.limpiarTexto(datos.solicitante);
@@ -357,16 +386,35 @@ export class CatastroService {
     if (datos.plazo_anios !== undefined) {
       nicho.plazo_anios = datos.plazo_anios ?? null;
     }
-    // Un contrato perpetuo no conserva plazo ni año de vencimiento.
+
     if (nicho.es_perpetuo) {
+      // Un contrato perpetuo no conserva plazo ni vencimiento.
       nicho.plazo_anios = null;
+      nicho.fecha_vencimiento = null;
+    } else {
+      // La Resolución Administrativa (RA.) es exclusiva de perpetuos.
+      nicho.resolucion = null;
+      // Vencimiento completo con el mismo día y mes del entierro.
+      if (
+        datos.fecha_vencimiento === undefined &&
+        nicho.fecha_defuncion &&
+        nicho.plazo_anios !== null
+      ) {
+        nicho.fecha_vencimiento = this.sumarAnios(
+          nicho.fecha_defuncion,
+          nicho.plazo_anios,
+        );
+      }
     }
 
     const apellidoPaterno = (nicho.apellido_paterno ?? '').trim();
     const apellidoMaterno = (nicho.apellido_materno ?? '').trim();
     nicho.apellido_difunto = `${apellidoPaterno} ${apellidoMaterno}`.trim() || null;
     nicho.nombre_difunto = (nicho.nombres ?? '').trim() || null;
-    nicho.anio_vencimiento = this.calcularAnioVencimiento(nicho);
+    nicho.anio_vencimiento = nicho.es_perpetuo
+      ? null
+      : (this.anioDeFecha(nicho.fecha_vencimiento) ??
+        this.calcularAnioVencimiento(nicho));
 
     return this.nichoRepository.save(nicho);
   }
@@ -421,10 +469,11 @@ export class CatastroService {
     nicho.apellido_difunto =
       `${apellidoPaterno ?? ''} ${apellidoMaterno ?? ''}`.trim() || null;
     nicho.nombre_difunto = nicho.nombres;
-    nicho.anio_defuncion = datos.anio_defuncion ?? null;
+    nicho.fecha_defuncion = this.normalizarFecha(datos.fecha_defuncion);
+    nicho.anio_defuncion =
+      this.anioDeFecha(nicho.fecha_defuncion) ?? (datos.anio_defuncion ?? null);
     nicho.solicitante = this.limpiarTexto(datos.solicitante);
     nicho.telefono_solicitante = this.limpiarTexto(datos.telefono_solicitante);
-    nicho.resolucion = this.limpiarTexto(datos.resolucion);
     nicho.sector_camposanto = this.limpiarTexto(datos.sector_camposanto);
     nicho.observaciones = this.limpiarTexto(datos.observaciones);
     nicho.tipo_espacio = 'Camposanto';
@@ -432,7 +481,20 @@ export class CatastroService {
     nicho.es_perpetuo = datos.es_perpetuo === true;
     nicho.plazo_anios = nicho.es_perpetuo ? null : (datos.plazo_anios ?? null);
     nicho.monto_contrato_bs = datos.monto_contrato_bs ?? null;
-    nicho.anio_vencimiento = this.calcularAnioVencimiento(nicho);
+    // La RA. solo corresponde a perpetuos; el vencimiento se calcula a partir
+    // de la fecha de entierro conservando el día y el mes.
+    nicho.resolucion = nicho.es_perpetuo
+      ? this.limpiarTexto(datos.resolucion)
+      : null;
+    nicho.fecha_vencimiento = nicho.es_perpetuo
+      ? null
+      : (this.normalizarFecha(datos.fecha_vencimiento) ??
+        (nicho.fecha_defuncion && nicho.plazo_anios !== null
+          ? this.sumarAnios(nicho.fecha_defuncion, nicho.plazo_anios)
+          : null));
+    nicho.anio_vencimiento =
+      this.anioDeFecha(nicho.fecha_vencimiento) ??
+      this.calcularAnioVencimiento(nicho);
 
     const guardado = await this.nichoRepository.save(nicho);
     return this.serializarNicho({ ...guardado, predio } as Nicho);
@@ -516,6 +578,9 @@ export class CatastroService {
       id: string;
       estado: string;
       es_perpetuo: boolean | null;
+      anio_defuncion: number | string | null;
+      fecha_defuncion: string | null;
+      fecha_vencimiento: string | null;
       anio_vencimiento: number | string | null;
       tipo_espacio: string | null;
       nombres: string | null;
@@ -533,6 +598,9 @@ export class CatastroService {
       `SELECT n.id,
               n.estado,
               n.es_perpetuo,
+              n.anio_defuncion,
+              n.fecha_defuncion,
+              n.fecha_vencimiento,
               n.anio_vencimiento,
               n.tipo_espacio,
               n.nombres,
@@ -627,6 +695,14 @@ export class CatastroService {
           sector_camposanto: registro.sector_camposanto ?? null,
           fila: Number(registro.fila),
           columna: Number(registro.columna),
+          fecha_defuncion: this.formatearFecha(
+            registro.fecha_defuncion,
+            registro.anio_defuncion,
+          ),
+          fecha_vencimiento: this.formatearFecha(
+            registro.fecha_vencimiento,
+            anioVencimiento,
+          ),
           anio_vencimiento: anioVencimiento,
           es_perpetuo: esPerpetuo,
           estado: registro.estado,
@@ -681,6 +757,9 @@ export class CatastroService {
       tipo_espacio: string | null;
       estado: string;
       es_perpetuo: boolean | null;
+      anio_defuncion: number | string | null;
+      fecha_defuncion: string | null;
+      fecha_vencimiento: string | null;
       anio_vencimiento: number | string | null;
       sector_camposanto: string | null;
       fila: number | string;
@@ -697,6 +776,9 @@ export class CatastroService {
               n.tipo_espacio,
               n.estado,
               n.es_perpetuo,
+              n.anio_defuncion,
+              n.fecha_defuncion,
+              n.fecha_vencimiento,
               n.anio_vencimiento,
               n.sector_camposanto,
               n.fila,
@@ -719,11 +801,15 @@ export class CatastroService {
           ? null
           : Number(registro.anio_vencimiento);
       const esPerpetuo = registro.es_perpetuo === true;
+      const vencimientoTexto = this.formatearFecha(
+        registro.fecha_vencimiento,
+        anioVencimiento,
+      );
 
       const regimen = esPerpetuo
         ? 'Perpetuo'
-        : anioVencimiento !== null
-          ? `Temporal hasta ${anioVencimiento}`
+        : vencimientoTexto
+          ? `Temporal hasta ${vencimientoTexto}`
           : 'Temporal';
 
       // El estado interno "Libre" no se publica; solo se informa deuda o
@@ -743,6 +829,11 @@ export class CatastroService {
           registro.sector_camposanto || registro.codigo_lote || 'S/N',
         fila: Number(registro.fila),
         columna: Number(registro.columna),
+        fecha_defuncion: this.formatearFecha(
+          registro.fecha_defuncion,
+          registro.anio_defuncion,
+        ),
+        fecha_vencimiento: esPerpetuo ? null : vencimientoTexto,
         regimen,
         estado_ciudadano: estadoCiudadano,
         // Solo iniciales del titular como referencia, nunca su nombre completo.
@@ -762,6 +853,88 @@ export class CatastroService {
   private limpiarTexto(valor?: string | null): string | null {
     const texto = (valor ?? '').trim();
     return texto.length > 0 ? texto : null;
+  }
+
+  /** Fecha ISO válida (YYYY-MM-DD) o null; descarta valores incompletos. */
+  private normalizarFecha(valor?: string | null): string | null {
+    const texto = (valor ?? '').trim();
+    const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto);
+
+    if (!partes) {
+      return null;
+    }
+
+    const [, anio, mes, dia] = partes;
+    const fecha = new Date(
+      Date.UTC(Number(anio), Number(mes) - 1, Number(dia)),
+    );
+
+    if (
+      fecha.getUTCFullYear() !== Number(anio) ||
+      fecha.getUTCMonth() !== Number(mes) - 1 ||
+      fecha.getUTCDate() !== Number(dia)
+    ) {
+      return null;
+    }
+
+    return `${anio}-${mes}-${dia}`;
+  }
+
+  /** Año (YYYY) extraído de una fecha ISO o null. */
+  private anioDeFecha(fecha?: string | null): number | null {
+    const normalizada = this.normalizarFecha(fecha);
+
+    if (!normalizada) {
+      return null;
+    }
+
+    const anio = Number(normalizada.slice(0, 4));
+    return Number.isFinite(anio) ? anio : null;
+  }
+
+  /**
+   * Suma años a una fecha ISO conservando el mismo día y mes (ajusta el 29 de
+   * febrero a fin de mes cuando el año destino no es bisiesto).
+   */
+  private sumarAnios(fecha: string, anios: number): string | null {
+    const normalizada = this.normalizarFecha(fecha);
+    const plazo = Math.trunc(Number(anios));
+
+    if (!normalizada || !Number.isFinite(plazo) || plazo < 1) {
+      return null;
+    }
+
+    const [anio, mes, dia] = normalizada.split('-').map(Number);
+    const anioDestino = anio + plazo;
+    const ultimoDia = new Date(Date.UTC(anioDestino, mes, 0)).getUTCDate();
+    const diaDestino = Math.min(dia, ultimoDia);
+
+    return `${anioDestino}-${String(mes).padStart(2, '0')}-${String(
+      diaDestino,
+    ).padStart(2, '0')}`;
+  }
+
+  /**
+   * Fecha para mostrar: DD/MM/YYYY si hay fecha completa o el año YYYY de los
+   * registros históricos que solo guardaron el año.
+   */
+  private formatearFecha(
+    fecha?: string | null,
+    anio?: number | string | null,
+  ): string | null {
+    const normalizada = this.normalizarFecha(fecha);
+
+    if (normalizada) {
+      const [anioFecha, mes, dia] = normalizada.split('-');
+      return `${dia}/${mes}/${anioFecha}`;
+    }
+
+    if (anio === null || anio === undefined || anio === '') {
+      return null;
+    }
+
+    const numero = Number(anio);
+    return Number.isFinite(numero) ? String(Math.trunc(numero)) : null;
   }
 
   /** Unifica espacios repetidos y recorta los extremos. */
@@ -910,6 +1083,8 @@ export class CatastroService {
       nombre_difunto: this.formatearNombreDifunto(nicho) || null,
       apellido_difunto: null,
       anio_defuncion: nicho.anio_defuncion ?? null,
+      fecha_defuncion: nicho.fecha_defuncion ?? null,
+      fecha_vencimiento: nicho.fecha_vencimiento ?? null,
       solicitante: nicho.solicitante ?? null,
       telefono_solicitante: nicho.telefono_solicitante ?? null,
       resolucion: nicho.resolucion ?? null,
