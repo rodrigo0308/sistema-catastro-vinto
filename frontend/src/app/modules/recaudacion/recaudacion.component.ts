@@ -103,6 +103,13 @@ export class RecaudacionComponent implements AfterViewInit {
   desdeMantenimiento = false;
   estadoOrigen = '';
 
+  // Vínculo con la celda del catastro y estado del trámite de caja
+  nichoId = '';
+  estadoTramite = '';
+  confirmandoPago = false;
+  mensajePago = '';
+  errorPago = '';
+
   // Datos congelados al momento de calcular, para el ticket y el PDF
   conceptoAplicado = '';
   gestionesAplicadas = 1;
@@ -145,6 +152,18 @@ export class RecaudacionComponent implements AfterViewInit {
     );
   }
 
+  /** El trámite ya fue cancelado en caja (espacio Ocupado / Vigente). */
+  get pagoConfirmado(): boolean {
+    return this.estadoTramite === 'Ocupado';
+  }
+
+  /** Leyenda oficial que se imprime en el contrato y la pre-liquidación. */
+  get estadoTramiteTexto(): string {
+    return this.pagoConfirmado
+      ? 'CANCELADO EN CAJA'
+      : 'PENDIENTE DE CANCELACIÓN EN CAJA MUNICIPAL';
+  }
+
   get costoPreview(): number {
     const tarifa = Number(this.tarifaUnitaria) || 0;
     if (this.modoActual === 'contrato') {
@@ -156,6 +175,10 @@ export class RecaudacionComponent implements AfterViewInit {
   /** Prellena el formulario con los queryParams enviados desde el registro. */
   private prellenarDesdeRegistro(): void {
     const params = this.route.snapshot.queryParamMap;
+
+    // Vínculo con la celda del catastro: permite confirmar el pago en caja.
+    this.nichoId = params.get('nichoId') ?? '';
+    this.estadoTramite = params.get('estado') ?? '';
 
     // Cobro de mantenimiento anual desde una celda Ocupada / En Mora.
     if (params.get('modo') === 'mantenimiento') {
@@ -373,6 +396,36 @@ export class RecaudacionComponent implements AfterViewInit {
     });
   }
 
+  /** Confirma en el catastro que el contribuyente canceló el trámite en caja. */
+  confirmarPagoEnCaja(): void {
+    if (!this.nichoId || this.confirmandoPago) {
+      return;
+    }
+
+    this.confirmandoPago = true;
+    this.errorPago = '';
+    this.mensajePago = '';
+
+    this.http
+      .patch(`http://localhost:3000/catastro/nichos/${this.nichoId}/confirmar-pago`, {})
+      .subscribe({
+        next: () => {
+          this.confirmandoPago = false;
+          this.estadoTramite = 'Ocupado';
+          this.estadoOrigen = 'Ocupado';
+          this.mensajePago =
+            'Pago confirmado: el trámite figura como CANCELADO EN CAJA.';
+        },
+        error: (err) => {
+          console.error('Error al confirmar el pago en caja:', err);
+          this.confirmandoPago = false;
+          this.errorPago =
+            err?.error?.message ??
+            'No se pudo confirmar el pago. Verifique la conexión con el servidor.';
+        },
+      });
+  }
+
   // Genera y descarga el estado de cuenta / contrato en PDF, listo para caja.
   exportarPdf(): void {
     if (!this.resultado) {
@@ -413,6 +466,17 @@ export class RecaudacionComponent implements AfterViewInit {
       y
     );
     y += 6;
+
+    // Estado del trámite: pendiente de caja o ya cancelado
+    doc.setFontSize(9.5);
+    doc.setTextColor(
+      this.pagoConfirmado ? 21 : 185,
+      this.pagoConfirmado ? 128 : 28,
+      this.pagoConfirmado ? 61 : 28
+    );
+    doc.text('ESTADO DEL TRÁMITE: ' + this.estadoTramiteTexto, margen, y);
+    y += 6;
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(120);

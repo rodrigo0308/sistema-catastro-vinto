@@ -291,6 +291,10 @@ h4:not(:first-child) {
     background: #64748b;
 }
 
+.estado-pendiente-de-pago {
+    background: #f97316;
+}
+
 .estado-ocupado {
     background: #e74c3c;
 }

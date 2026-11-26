@@ -428,6 +428,13 @@
     font-weight: 700;
 }
 
+.celda-pendiente-de-pago {
+    background: #f97316;
+    border-color: #ea580c;
+    color: #fff;
+    font-weight: 700;
+}
+
 .celda-vacia {
     background: #f8f9fa;
     color: #bdc3c7;
@@ -546,6 +553,71 @@
     background: #facc15;
     border: 1px solid #eab308;
     color: #1e293b;
+}
+
+.badge.celda-pendiente-de-pago {
+    background: #f97316;
+}
+
+.confirmar-pago {
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    border-radius: 6px;
+}
+
+.confirmar-pago label {
+    display: block;
+    margin-bottom: 5px;
+    color: #7c2d12;
+    font-size: 0.82em;
+    font-weight: 700;
+}
+
+.confirmar-pago .form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #fdba74;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 0.88em;
+}
+
+.btn-confirmar-pago {
+    margin-top: 8px;
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #ea580c;
+    color: #fff;
+    font-size: 0.92em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-confirmar-pago:hover:not(:disabled) {
+    background: #c2410c;
+}
+
+.btn-confirmar-pago:disabled {
+    background: #fdba74;
+    cursor: not-allowed;
+}
+
+.nota-confirmacion {
+    display: block;
+    margin-top: 6px;
+    color: #9a3412;
+    font-size: 0.78em;
+    line-height: 1.35;
+}
+
+.error-confirmacion {
+    margin-top: 6px;
+    color: #b91c1c;
+    font-size: 0.8em;
 }
 
 @media (max-width: 640px) {

@@ -13,6 +13,20 @@
         Datos cargados desde el Registro de Difuntos. Verifique el plazo, el monto acordado y complete el titular.
     </div>
 
+    <!-- Estado del trámite de caja y confirmación del cobro -->
+    <div class="estado-tramite" *ngIf="nichoId" [class.cancelado]="pagoConfirmado">
+        <div class="estado-tramite-texto">
+            <span>ESTADO DEL TRÁMITE:</span>
+            <b>{{ estadoTramiteTexto }}</b>
+        </div>
+        <button type="button" class="btn-confirmar-pago" *ngIf="!pagoConfirmado"
+            (click)="confirmarPagoEnCaja()" [disabled]="confirmandoPago">
+            {{ confirmandoPago ? 'Confirmando...' : 'Confirmar Pago Realizado en Caja' }}
+        </button>
+        <small class="mensaje-pago" *ngIf="mensajePago">{{ mensajePago }}</small>
+        <div class="error-msg" *ngIf="errorPago">{{ errorPago }}</div>
+    </div>
+
     <div class="grid-calculadora">
         <!-- Panel Izquierdo: Formulario de Ingreso -->
         <div class="card form-card">
@@ -125,6 +139,11 @@
                     <li *ngIf="ubicacionAplicada"><span>Ubicación:</span> <b>{{ ubicacionAplicada }}</b></li>
                     <li><span>Tipo de Espacio:</span> <b>{{ tipoEspacioAplicado }}</b></li>
                     <li><span>Plazo de Vigencia:</span> <b>{{ vigenciaAplicada }}</b></li>
+                    <li>
+                        <span>Estado del Trámite:</span>
+                        <b [class]="pagoConfirmado ? 'estado-cancelado' : 'estado-pendiente'"
+                            *ngIf="nichoId">{{ estadoTramiteTexto }}</b>
+                    </li>
                     <li *ngIf="esContratoAplicado"><span>Monto del Contrato:</span> <b>{{ tarifaAplicada }} Bs.
                             (global)</b></li>
                 </ul>

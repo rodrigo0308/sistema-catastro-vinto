@@ -314,6 +314,86 @@ h4:not(:first-child) {
     cursor: not-allowed;
 }
 
+/* Estado del trámite de caja (pendiente / cancelado) */
+.estado-tramite {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    background: #fff7ed;
+    border-left: 4px solid #f97316;
+    border-radius: 6px;
+}
+
+.estado-tramite.cancelado {
+    background: #ecfdf5;
+    border-left-color: #15803d;
+}
+
+.estado-tramite-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1 1 260px;
+}
+
+.estado-tramite-texto span {
+    color: #7c2d12;
+    font-size: 0.76em;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
+.estado-tramite-texto b {
+    color: #b91c1c;
+    font-size: 0.92em;
+}
+
+.estado-tramite.cancelado .estado-tramite-texto span {
+    color: #166534;
+}
+
+.estado-tramite.cancelado .estado-tramite-texto b {
+    color: #15803d;
+}
+
+.btn-confirmar-pago {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    background: #ea580c;
+    color: #fff;
+    font-size: 0.9em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-confirmar-pago:hover:not(:disabled) {
+    background: #c2410c;
+}
+
+.btn-confirmar-pago:disabled {
+    background: #fdba74;
+    cursor: not-allowed;
+}
+
+.mensaje-pago {
+    flex-basis: 100%;
+    color: #166534;
+    font-size: 0.82em;
+    font-weight: 600;
+}
+
+.estado-cancelado {
+    color: #15803d;
+}
+
+.estado-pendiente {
+    color: #b91c1c;
+}
+
 @media (max-width: 900px) {
     .grid-calculadora {
         grid-template-columns: 1fr;

@@ -6,7 +6,7 @@ import { Router } from '@angular/router';
 
 const API_URL = 'http://localhost:3000';
 
-type EstadoCamposanto = 'Libre' | 'Ocupado' | 'Mora';
+type EstadoCamposanto = 'Libre' | 'Pendiente de Pago' | 'Ocupado' | 'Mora';
 
 /** Fecha ISO (YYYY-MM-DD) de hoy según la hora local. */
 function fechaHoy(): string {
@@ -81,6 +81,8 @@ interface FormularioCamposanto {
   telefono_solicitante: string;
   resolucion: string;
   estado: EstadoCamposanto;
+  // Desmarcado: el alta se guarda como 'Pendiente de Pago'.
+  pago_en_caja: boolean;
   es_perpetuo: boolean;
   plazo_anios: number | null;
   monto_contrato_bs: number | null;
@@ -105,7 +107,7 @@ export class CamposantosComponent implements OnInit {
   error = '';
 
   busqueda = '';
-  filtroEstado: 'Todos' | 'Ocupado' | 'Mora' = 'Todos';
+  filtroEstado: 'Todos' | 'Pendiente de Pago' | 'Ocupado' | 'Mora' = 'Todos';
 
   mostrarFormulario = false;
   editandoId: string | null = null;
@@ -136,7 +138,8 @@ export class CamposantosComponent implements OnInit {
       solicitante: '',
       telefono_solicitante: '',
       resolucion: '',
-      estado: 'Ocupado',
+      estado: 'Pendiente de Pago',
+      pago_en_caja: false,
       es_perpetuo: false,
       plazo_anios: null,
       monto_contrato_bs: null,
@@ -223,6 +226,7 @@ export class CamposantosComponent implements OnInit {
       telefono_solicitante: registro.telefono_solicitante ?? '',
       resolucion: registro.resolucion ?? '',
       estado: registro.estado,
+      pago_en_caja: registro.estado === 'Ocupado',
       es_perpetuo: registro.es_perpetuo === true,
       plazo_anios: registro.plazo_anios ?? null,
       monto_contrato_bs: registro.monto_contrato_bs ?? null,
@@ -302,6 +306,17 @@ export class CamposantosComponent implements OnInit {
     });
   }
 
+  /**
+   * Estado que se envía al backend: el pago confirmado siempre deja el sitio
+   * Ocupado; un alta sin pago nace como Pendiente de Pago.
+   */
+  private estadoAEnviar(): EstadoCamposanto {
+    if (this.formulario.pago_en_caja) {
+      return 'Ocupado';
+    }
+    return this.editandoId ? this.formulario.estado : 'Pendiente de Pago';
+  }
+
   private cuerpoFormulario() {
     const datos = this.formulario;
     const numero = (valor: number | null): number | null =>
@@ -319,7 +334,7 @@ export class CamposantosComponent implements OnInit {
       solicitante: datos.solicitante.trim(),
       telefono_solicitante: datos.telefono_solicitante.trim(),
       resolucion: datos.es_perpetuo ? datos.resolucion.trim() : null,
-      estado: datos.estado,
+      estado: this.estadoAEnviar(),
       es_perpetuo: datos.es_perpetuo,
       plazo_anios: datos.es_perpetuo ? null : numero(datos.plazo_anios),
       monto_contrato_bs: numero(datos.monto_contrato_bs),
@@ -413,6 +428,8 @@ export class CamposantosComponent implements OnInit {
   }
 
   claseEstado(estado: string): string {
-    return `estado-${(estado ?? '').toLowerCase()}`;
+    return `estado-${(estado ?? '')
+      .toLowerCase()
+      .replace(/\s+/g, '-')}`;
   }
 }

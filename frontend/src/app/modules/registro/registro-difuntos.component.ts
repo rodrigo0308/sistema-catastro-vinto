@@ -12,6 +12,7 @@ interface Bloque {
 }
 
 interface NichoRegistrado {
+  id: string;
   predio_id: string;
   fila: number;
   columna: number;
@@ -113,7 +114,8 @@ export class RegistroDifuntosComponent implements OnInit {
     solicitante: '',
     telefono_solicitante: '',
     resolucion: '',
-    estado: 'Ocupado' as 'Ocupado' | 'Mora',
+    // Desmarcado: el registro se guarda como 'Pendiente de Pago' en caja.
+    pago_en_caja: false,
     tipo_espacio: 'Nicho' as TipoEspacio,
     regimen: this.regimenes[0].etiqueta,
     plazo_anios: this.regimenes[0].plazo as number | null,
@@ -319,7 +321,7 @@ export class RegistroDifuntosComponent implements OnInit {
       resolucion: this.formulario.es_perpetuo
         ? this.formulario.resolucion.trim() || undefined
         : undefined,
-      estado: this.formulario.estado,
+      estado: this.formulario.pago_en_caja ? 'Ocupado' : 'Pendiente de Pago',
       tipo_espacio: this.formulario.tipo_espacio,
       plazo_anios: this.formulario.es_perpetuo
         ? undefined
@@ -339,6 +341,7 @@ export class RegistroDifuntosComponent implements OnInit {
         next: (nicho) => {
           this.guardando = false;
           this.nichoRegistrado = {
+            id: nicho.id,
             predio_id: nicho.predio_id ?? body.predio_id,
             fila: nicho.fila ?? body.fila,
             columna: nicho.columna ?? body.columna,
@@ -405,6 +408,8 @@ export class RegistroDifuntosComponent implements OnInit {
         esPerpetuo: this.formulario.es_perpetuo,
         anioVencimiento: this.anioVencimiento,
         montoContrato: this.formulario.monto_contrato_bs,
+        nichoId: this.nichoRegistrado.id,
+        estado: this.formulario.pago_en_caja ? 'Ocupado' : 'Pendiente de Pago',
       },
     });
   }
@@ -421,7 +426,7 @@ export class RegistroDifuntosComponent implements OnInit {
     this.formulario.solicitante = '';
     this.formulario.telefono_solicitante = '';
     this.formulario.resolucion = '';
-    this.formulario.estado = 'Ocupado';
+    this.formulario.pago_en_caja = false;
     this.formulario.tipo_espacio = 'Nicho';
     this.formulario.regimen = this.regimenes[0].etiqueta;
     this.formulario.plazo_anios = this.regimenes[0].plazo;

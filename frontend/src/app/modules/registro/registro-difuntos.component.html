@@ -10,7 +10,7 @@
             <strong>Registro guardado correctamente.</strong>
             <span>
                 {{ bloqueRegistrado || 'Bloque' }} - Fila {{ nicho.fila }}, Columna {{ nicho.columna }}.
-                El nicho ya figura como ocupado en el geovisor.
+                El nicho figura como {{ formulario.pago_en_caja ? 'Ocupado / Vigente' : 'Pendiente de Pago' }} en el geovisor.
             </span>
         </div>
         <div class="exito-acciones">
@@ -151,13 +151,18 @@
                 </small>
             </div>
 
-            <div class="form-group">
-                <label for="estado">Estado</label>
-                <select id="estado" name="estado" class="form-control" [(ngModel)]="formulario.estado">
-                    <option value="Ocupado">Ocupado</option>
-                    <option value="Mora">Mora</option>
-                </select>
-            </div>
+        </div>
+
+        <!-- Pago en caja: define si el registro nace Pendiente o ya Ocupado -->
+        <div class="pago-caja">
+            <label class="check-pago">
+                <input type="checkbox" name="pago_en_caja" [(ngModel)]="formulario.pago_en_caja">
+                ¿El contribuyente ya realizó el pago en caja?
+            </label>
+            <small class="help-text">
+                Desmarcado: el registro se guarda como <b>Pendiente de Pago</b> hasta confirmarlo en caja.
+                Marcado: se guarda como <b>Ocupado / Vigente</b>.
+            </small>
         </div>
 
         <div class="error-msg" *ngIf="error">{{ error }}</div>

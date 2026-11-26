@@ -51,7 +51,7 @@ function formatearFechaCorta(fecha: string): string {
   return `${dia}/${mes}/${anio}`;
 }
 
-type EstadoNicho = 'Libre' | 'Ocupado' | 'Mora';
+type EstadoNicho = 'Libre' | 'Pendiente de Pago' | 'Ocupado' | 'Mora';
 
 interface Nicho {
   id: string;
@@ -164,6 +164,11 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
   errorPanel = '';
   celdaSeleccionada: Nicho | null = null;
   nichoResaltado: { fila: number; columna: number } | null = null;
+
+  // Confirmación de pago en caja para celdas Pendiente de Pago o en Mora
+  comprobanteCaja = '';
+  confirmandoPago = false;
+  errorConfirmacion = '';
 
   // Modal de edición de cualquier registro (nichos, mausoleos, camposantos)
   modalEdicionAbierto = false;
@@ -606,6 +611,41 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
 
   seleccionarCelda(nicho: Nicho | null): void {
     this.celdaSeleccionada = nicho;
+    this.comprobanteCaja = '';
+    this.confirmandoPago = false;
+    this.errorConfirmacion = '';
+  }
+
+  /**
+   * Confirma el pago en caja de una celda Pendiente de Pago o en Mora: pasa a
+   * Ocupado / Vigente y opcionalmente deja constancia del comprobante.
+   */
+  confirmarPagoEnCaja(nicho: Nicho): void {
+    this.confirmandoPago = true;
+    this.errorConfirmacion = '';
+    const comprobante = this.comprobanteCaja.trim();
+
+    this.http
+      .patch(`${API_URL}/catastro/nichos/${nicho.id}/confirmar-pago`, {
+        comprobante_caja: comprobante || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.confirmandoPago = false;
+          this.comprobanteCaja = '';
+          this.abrirBloque(nicho.predio_id, {
+            fila: nicho.fila,
+            columna: nicho.columna,
+          });
+        },
+        error: (err) => {
+          console.error('Error al confirmar el pago en caja:', err);
+          this.confirmandoPago = false;
+          this.errorConfirmacion =
+            err?.error?.message ??
+            'No se pudo confirmar el pago. Verifique la conexión con el servidor.';
+        },
+      });
   }
 
   /** Lleva al formulario de registro con el bloque y la celda elegidos. */
@@ -639,6 +679,7 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
         tipoEspacio: nicho.tipo_espacio ?? 'Nicho',
         esPerpetuo: nicho.es_perpetuo ? 'true' : 'false',
         estado: nicho.estado,
+        nichoId: nicho.id,
       },
     });
   }
@@ -770,7 +811,7 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     if (!nicho) {
       return 'celda-vacia';
     }
-    return `celda-${nicho.estado.toLowerCase()}`;
+    return `celda-${nicho.estado.toLowerCase().replace(/\s+/g, '-')}`;
   }
 
   letraEstado(nicho: Nicho | null): string {

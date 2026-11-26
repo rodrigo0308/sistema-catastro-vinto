@@ -84,6 +84,7 @@
     <div class="map-legend">
         <h5>Simbología</h5>
         <div class="legend-item"><span class="dot" style="background: #2ecc71;"></span> Libre</div>
+        <div class="legend-item"><span class="dot" style="background: #f97316; border-color: #ea580c;"></span> Pendiente de Pago (P)</div>
         <div class="legend-item"><span class="dot" style="background: #facc15; border-color: #eab308;"></span> En Mora</div>
         <div class="legend-item"><span class="dot" style="background: #e74c3c;"></span> Ocupado</div>
     </div>
@@ -161,6 +162,21 @@
                 <p><b>Régimen / Vencimiento:</b> {{ regimenNicho(n) }}</p>
                 <p><b>Resolución:</b> {{ n.resolucion || 'Sin registro' }}</p>
 
+                <!-- Cobro pendiente: confirma el pago y pasa la celda a Ocupado -->
+                <div class="confirmar-pago" *ngIf="n.estado === 'Pendiente de Pago' || n.estado === 'Mora'">
+                    <label for="comprobante-caja">N° de comprobante de caja (opcional)</label>
+                    <input id="comprobante-caja" type="text" class="form-control" [(ngModel)]="comprobanteCaja"
+                        placeholder="Ej: 000123" autocomplete="off">
+                    <button type="button" class="btn-confirmar-pago" (click)="confirmarPagoEnCaja(n)"
+                        [disabled]="confirmandoPago">
+                        {{ confirmandoPago ? 'Confirmando...' : 'Confirmar Pago en Caja' }}
+                    </button>
+                    <small class="nota-confirmacion">
+                        Al confirmar, la celda pasa a Ocupado / Vigente.
+                    </small>
+                    <div class="error-confirmacion" *ngIf="errorConfirmacion">{{ errorConfirmacion }}</div>
+                </div>
+
                 <button
                     class="btn-registrar"
                     *ngIf="n.estado === 'Libre'"
@@ -171,7 +187,7 @@
 
                 <button
                     class="btn-editar-registro"
-                    *ngIf="n.estado === 'Ocupado' || n.estado === 'Mora'"
+                    *ngIf="n.estado === 'Ocupado' || n.estado === 'Mora' || n.estado === 'Pendiente de Pago'"
                     (click)="abrirEdicion(n)"
                 >
                     Editar Registro
@@ -267,6 +283,7 @@
                         <label for="edit-estado">Estado</label>
                         <select id="edit-estado" class="form-control" [(ngModel)]="formularioNicho.estado">
                             <option value="Libre">Libre</option>
+                            <option value="Pendiente de Pago">Pendiente de Pago</option>
                             <option value="Ocupado">Ocupado</option>
                             <option value="Mora">Mora</option>
                         </select>
