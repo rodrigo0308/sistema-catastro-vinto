@@ -100,7 +100,12 @@ export class CatastroService {
       columnas: [...new Set(nichos.map((nicho) => nicho.columna))].sort(
         (a, b) => a - b,
       ),
-      nichos,
+      // El nombre completo se entrega ya formateado (sin apellidos repetidos).
+      nichos: nichos.map((nicho) => ({
+        ...nicho,
+        nombre_difunto: this.formatearNombreDifunto(nicho),
+        apellido_difunto: null,
+      })),
     };
   }
 
@@ -194,10 +199,18 @@ export class CatastroService {
    */
   async buscarPorApellido(texto: string) {
     const termino = (texto ?? '').trim();
+    const tokens = this.extraerTokens(termino);
 
-    if (termino.length < 2) {
+    if (tokens.length === 0) {
       return [];
     }
+
+    // Cada palabra debe aparecer (AND) en los nombres, apellidos o ubicación,
+    // sin importar el orden en que se escriban.
+    const busqueda = this.filtrarPorTokens(
+      tokens,
+      `CONCAT_WS(' ', COALESCE(n.nombres, ''), COALESCE(n.apellido_paterno, ''), COALESCE(n.apellido_materno, ''), COALESCE(n.apellido_difunto, ''), COALESCE(n.nombre_difunto, ''), COALESCE(p.codigo_lote, ''), COALESCE(n.sector_camposanto, ''))`,
+    );
 
     const resultados: Array<{
       id: string;
@@ -206,6 +219,9 @@ export class CatastroService {
       fila: number;
       columna: number;
       estado: string;
+      nombres: string | null;
+      apellido_paterno: string | null;
+      apellido_materno: string | null;
       nombre_difunto: string | null;
       apellido_difunto: string | null;
       solicitante: string | null;
@@ -229,6 +245,9 @@ export class CatastroService {
          n.fila,
          n.columna,
          n.estado,
+         n.nombres,
+         n.apellido_paterno,
+         n.apellido_materno,
          n.nombre_difunto,
          n.apellido_difunto,
          n.solicitante,
@@ -246,11 +265,10 @@ export class CatastroService {
          ST_XMax(ST_Envelope(p.poligono)) AS max_lng
        FROM nichos n
        INNER JOIN predio_nicho p ON p.id = n.predio_id
-       WHERE n.apellido_difunto ILIKE $1
-          OR n.nombre_difunto ILIKE $1
+       WHERE ${busqueda.sql}
        ORDER BY n.apellido_difunto NULLS LAST, n.fila, n.columna
        LIMIT 50`,
-      [`%${termino}%`],
+      busqueda.params,
     );
 
     return resultados.map((r) => ({
@@ -260,8 +278,8 @@ export class CatastroService {
       fila: Number(r.fila),
       columna: Number(r.columna),
       estado: r.estado,
-      nombre_difunto: r.nombre_difunto,
-      apellido_difunto: r.apellido_difunto,
+      nombre_difunto: this.formatearNombreDifunto(r),
+      apellido_difunto: null,
       solicitante: r.solicitante,
       resolucion: r.resolucion,
       tipo_espacio: r.tipo_espacio ?? 'Nicho',
@@ -500,6 +518,9 @@ export class CatastroService {
       es_perpetuo: boolean | null;
       anio_vencimiento: number | string | null;
       tipo_espacio: string | null;
+      nombres: string | null;
+      apellido_paterno: string | null;
+      apellido_materno: string | null;
       nombre_difunto: string | null;
       apellido_difunto: string | null;
       solicitante: string | null;
@@ -514,6 +535,9 @@ export class CatastroService {
               n.es_perpetuo,
               n.anio_vencimiento,
               n.tipo_espacio,
+              n.nombres,
+              n.apellido_paterno,
+              n.apellido_materno,
               n.nombre_difunto,
               n.apellido_difunto,
               n.solicitante,
@@ -585,10 +609,7 @@ export class CatastroService {
       const etiqueta =
         registro.tipo_espacio === 'Camposanto' ? 'Camposanto' : 'Bloque';
       const difunto =
-        [registro.nombre_difunto, registro.apellido_difunto]
-          .filter(Boolean)
-          .join(' ')
-          .trim() || 'Sin difunto registrado';
+        this.formatearNombreDifunto(registro) || 'Sin difunto registrado';
 
       return [
         {
@@ -644,7 +665,16 @@ export class CatastroService {
       );
     }
 
+    const tokens = this.extraerTokens(termino);
+    const busqueda = this.filtrarPorTokens(
+      tokens,
+      `CONCAT_WS(' ', COALESCE(n.nombres, ''), COALESCE(n.apellido_paterno, ''), COALESCE(n.apellido_materno, ''), COALESCE(n.apellido_difunto, ''), COALESCE(n.nombre_difunto, ''), COALESCE(p.codigo_lote, ''), COALESCE(n.sector_camposanto, ''))`,
+    );
+
     const registros: Array<{
+      nombres: string | null;
+      apellido_paterno: string | null;
+      apellido_materno: string | null;
       nombre_difunto: string | null;
       apellido_difunto: string | null;
       solicitante: string | null;
@@ -658,7 +688,10 @@ export class CatastroService {
       codigo_lote: string | null;
       centroide: unknown;
     }> = await this.nichoRepository.query(
-      `SELECT n.nombre_difunto,
+      `SELECT n.nombres,
+              n.apellido_paterno,
+              n.apellido_materno,
+              n.nombre_difunto,
               n.apellido_difunto,
               n.solicitante,
               n.tipo_espacio,
@@ -673,13 +706,10 @@ export class CatastroService {
          FROM nichos n
          INNER JOIN predio_nicho p ON p.id = n.predio_id
         WHERE n.estado <> 'Libre'
-          AND (n.apellido_paterno ILIKE $1
-            OR n.apellido_materno ILIKE $1
-            OR n.nombres ILIKE $1
-            OR p.codigo_lote ILIKE $1)
+          AND ${busqueda.sql}
         ORDER BY n.apellido_difunto NULLS LAST, p.codigo_lote, n.fila, n.columna
         LIMIT 25`,
-      [`%${termino}%`],
+      busqueda.params,
     );
 
     const resultados = registros.map((registro) => {
@@ -707,10 +737,7 @@ export class CatastroService {
 
       return {
         difunto:
-          [registro.nombre_difunto, registro.apellido_difunto]
-            .filter(Boolean)
-            .join(' ')
-            .trim() || 'Sin difunto registrado',
+          this.formatearNombreDifunto(registro) || 'Sin difunto registrado',
         tipo_espacio: registro.tipo_espacio ?? 'Nicho',
         bloque_sector:
           registro.sector_camposanto || registro.codigo_lote || 'S/N',
@@ -735,6 +762,80 @@ export class CatastroService {
   private limpiarTexto(valor?: string | null): string | null {
     const texto = (valor ?? '').trim();
     return texto.length > 0 ? texto : null;
+  }
+
+  /** Unifica espacios repetidos y recorta los extremos. */
+  private normalizarEspacios(valor?: string | null): string {
+    return (valor ?? '').replace(/\s+/g, ' ').trim();
+  }
+
+  /** Texto sin tildes ni diacríticos para comparar nombres. */
+  private sinTildes(texto: string): string {
+    return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  /** Palabras válidas de la búsqueda (mínimo 2 caracteres cada una). */
+  private extraerTokens(texto: string): string[] {
+    return this.normalizarEspacios(texto)
+      .split(' ')
+      .filter((token) => token.length >= 2);
+  }
+
+  /**
+   * Condición SQL que exige que todas las palabras aparezcan (AND) en la
+   * concatenación indicada, con parámetros numerados desde $1.
+   */
+  private filtrarPorTokens(
+    tokens: string[],
+    columnas: string,
+  ): { sql: string; params: string[] } {
+    const condiciones = tokens.map(
+      (_, indice) => `${columnas} ILIKE $${indice + 1}`,
+    );
+
+    return {
+      sql: `(${condiciones.join(' AND ')})`,
+      params: tokens.map((token) => `%${token}%`),
+    };
+  }
+
+  /**
+   * Nombre completo del difunto sin apellidos repetidos. Si `nombres` ya
+   * incluye el apellido paterno o materno (por ejemplo "FERMINA VELIZ MAMANI")
+   * no se vuelven a concatenar. Devuelve '' si no hay datos.
+   */
+  private formatearNombreDifunto(registro: {
+    nombres?: string | null;
+    apellido_paterno?: string | null;
+    apellido_materno?: string | null;
+    nombre_difunto?: string | null;
+    apellido_difunto?: string | null;
+  }): string {
+    const nombres =
+      this.normalizarEspacios(registro.nombres) ||
+      this.normalizarEspacios(registro.nombre_difunto);
+    const paterno = this.normalizarEspacios(registro.apellido_paterno);
+    const materno = this.normalizarEspacios(registro.apellido_materno);
+    const apellidos =
+      this.normalizarEspacios(`${paterno} ${materno}`) ||
+      this.normalizarEspacios(registro.apellido_difunto);
+
+    if (!nombres) {
+      return apellidos;
+    }
+    if (!apellidos) {
+      return nombres;
+    }
+
+    const nombresPlano = this.sinTildes(nombres).toLowerCase();
+    const faltantes = apellidos
+      .split(' ')
+      .filter(
+        (apellido) =>
+          !nombresPlano.includes(this.sinTildes(apellido).toLowerCase()),
+      );
+
+    return this.normalizarEspacios([nombres, ...faltantes].join(' '));
   }
 
   /**
@@ -806,8 +907,8 @@ export class CatastroService {
       apellido_paterno: nicho.apellido_paterno ?? null,
       apellido_materno: nicho.apellido_materno ?? null,
       nombres: nicho.nombres ?? null,
-      nombre_difunto: nicho.nombre_difunto ?? null,
-      apellido_difunto: nicho.apellido_difunto ?? null,
+      nombre_difunto: this.formatearNombreDifunto(nicho) || null,
+      apellido_difunto: null,
       anio_defuncion: nicho.anio_defuncion ?? null,
       solicitante: nicho.solicitante ?? null,
       telefono_solicitante: nicho.telefono_solicitante ?? null,
