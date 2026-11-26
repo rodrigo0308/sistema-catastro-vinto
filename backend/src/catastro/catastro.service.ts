@@ -629,6 +629,108 @@ export class CatastroService {
     };
   }
 
+  /**
+   * Consulta ciudadana pública (estilo RUAT). Busca por apellidos, nombres o
+   * código de bloque/lote y devuelve únicamente datos de consulta: difunto,
+   * tipo de espacio, ubicación, régimen, estado y centroide del predio.
+   * Nunca expone teléfono, resolución, montos ni el nombre del titular.
+   */
+  async consultarPublico(texto: string) {
+    const termino = (texto ?? '').trim();
+
+    if (termino.length < 3) {
+      throw new BadRequestException(
+        'Debe indicar al menos 3 caracteres para la consulta.',
+      );
+    }
+
+    const registros: Array<{
+      nombre_difunto: string | null;
+      apellido_difunto: string | null;
+      solicitante: string | null;
+      tipo_espacio: string | null;
+      estado: string;
+      es_perpetuo: boolean | null;
+      anio_vencimiento: number | string | null;
+      sector_camposanto: string | null;
+      fila: number | string;
+      columna: number | string;
+      codigo_lote: string | null;
+      centroide: unknown;
+    }> = await this.nichoRepository.query(
+      `SELECT n.nombre_difunto,
+              n.apellido_difunto,
+              n.solicitante,
+              n.tipo_espacio,
+              n.estado,
+              n.es_perpetuo,
+              n.anio_vencimiento,
+              n.sector_camposanto,
+              n.fila,
+              n.columna,
+              p.codigo_lote,
+              ST_AsGeoJSON(ST_Centroid(p.poligono))::json AS centroide
+         FROM nichos n
+         INNER JOIN predio_nicho p ON p.id = n.predio_id
+        WHERE n.estado <> 'Libre'
+          AND (n.apellido_paterno ILIKE $1
+            OR n.apellido_materno ILIKE $1
+            OR n.nombres ILIKE $1
+            OR p.codigo_lote ILIKE $1)
+        ORDER BY n.apellido_difunto NULLS LAST, p.codigo_lote, n.fila, n.columna
+        LIMIT 25`,
+      [`%${termino}%`],
+    );
+
+    const resultados = registros.map((registro) => {
+      const anioVencimiento =
+        registro.anio_vencimiento === null ||
+        registro.anio_vencimiento === undefined
+          ? null
+          : Number(registro.anio_vencimiento);
+      const esPerpetuo = registro.es_perpetuo === true;
+
+      const regimen = esPerpetuo
+        ? 'Perpetuo'
+        : anioVencimiento !== null
+          ? `Temporal hasta ${anioVencimiento}`
+          : 'Temporal';
+
+      // El estado interno "Libre" no se publica; solo se informa deuda o
+      // vigencia de los espacios ocupados.
+      const estadoCiudadano =
+        registro.estado === 'Mora'
+          ? 'Con deuda pendiente - Apersonarse a Recaudaciones'
+          : registro.estado === 'Libre'
+            ? null
+            : 'Vigente / Al día';
+
+      return {
+        difunto:
+          [registro.nombre_difunto, registro.apellido_difunto]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || 'Sin difunto registrado',
+        tipo_espacio: registro.tipo_espacio ?? 'Nicho',
+        bloque_sector:
+          registro.sector_camposanto || registro.codigo_lote || 'S/N',
+        fila: Number(registro.fila),
+        columna: Number(registro.columna),
+        regimen,
+        estado_ciudadano: estadoCiudadano,
+        // Solo iniciales del titular como referencia, nunca su nombre completo.
+        titular_referencia: this.referenciaTitular(registro.solicitante),
+        centroide: this.parsearCentroide(registro.centroide),
+      };
+    });
+
+    return {
+      consulta: termino,
+      total: resultados.length,
+      resultados,
+    };
+  }
+
   /** Texto recortado; los campos vacíos se guardan como null. */
   private limpiarTexto(valor?: string | null): string | null {
     const texto = (valor ?? '').trim();
@@ -656,6 +758,38 @@ export class CatastroService {
     }
 
     return anio + plazo;
+  }
+
+  /** Iniciales del titular: referencia útil sin exponer su nombre completo. */
+  private referenciaTitular(solicitante?: string | null): string | null {
+    const partes = (solicitante ?? '').trim().split(/\s+/).filter(Boolean);
+
+    if (partes.length === 0) {
+      return null;
+    }
+
+    return partes
+      .map((parte) => `${parte.charAt(0).toUpperCase()}.`)
+      .join(' ');
+  }
+
+  /** Normaliza el centroide devuelto por PostGIS (objeto o cadena JSON). */
+  private parsearCentroide(
+    valor: unknown,
+  ): { type: string; coordinates: number[] } | null {
+    if (valor === null || valor === undefined) {
+      return null;
+    }
+
+    if (typeof valor === 'string') {
+      try {
+        return JSON.parse(valor) as { type: string; coordinates: number[] };
+      } catch {
+        return null;
+      }
+    }
+
+    return valor as { type: string; coordinates: number[] };
   }
 
   /** Forma plana del nicho con su bloque, usada por la gestión de camposantos. */
