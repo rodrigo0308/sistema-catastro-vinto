@@ -484,6 +484,151 @@ export class CatastroService {
     };
   }
 
+  /**
+   * Alertas de vencimiento, mora y control de contratos.
+   * Clasifica los registros activos (Ocupado / Mora) según la gestión actual:
+   * - critico: estado Mora, o contrato temporal ya vencido.
+   * - advertencia: contrato temporal que vence este año o el próximo.
+   * - info: contrato perpetuo (control de mantenimiento anual).
+   */
+  async obtenerAlertas() {
+    const anioActual = new Date().getFullYear();
+
+    const registros: Array<{
+      id: string;
+      estado: string;
+      es_perpetuo: boolean | null;
+      anio_vencimiento: number | string | null;
+      tipo_espacio: string | null;
+      nombre_difunto: string | null;
+      apellido_difunto: string | null;
+      solicitante: string | null;
+      telefono_solicitante: string | null;
+      sector_camposanto: string | null;
+      fila: number | string;
+      columna: number | string;
+      codigo_lote: string | null;
+    }> = await this.nichoRepository.query(
+      `SELECT n.id,
+              n.estado,
+              n.es_perpetuo,
+              n.anio_vencimiento,
+              n.tipo_espacio,
+              n.nombre_difunto,
+              n.apellido_difunto,
+              n.solicitante,
+              n.telefono_solicitante,
+              n.sector_camposanto,
+              n.fila,
+              n.columna,
+              p.codigo_lote
+         FROM nichos n
+         INNER JOIN predio_nicho p ON p.id = n.predio_id
+        WHERE n.estado IN ('Ocupado', 'Mora')
+        ORDER BY n.apellido_difunto NULLS LAST, n.fila, n.columna`,
+    );
+
+    const prioridad: Record<string, number> = {
+      critico: 0,
+      advertencia: 1,
+      info: 2,
+    };
+
+    const alertas = registros.flatMap((registro) => {
+      const anioVencimiento =
+        registro.anio_vencimiento === null ||
+        registro.anio_vencimiento === undefined
+          ? null
+          : Number(registro.anio_vencimiento);
+      const esPerpetuo = registro.es_perpetuo === true;
+      const esTemporal = !esPerpetuo;
+      const enMora = registro.estado === 'Mora';
+      const vencido =
+        esTemporal &&
+        anioVencimiento !== null &&
+        anioVencimiento < anioActual;
+      const porVencer =
+        esTemporal &&
+        anioVencimiento !== null &&
+        (anioVencimiento === anioActual ||
+          anioVencimiento === anioActual + 1);
+
+      let nivel: 'critico' | 'advertencia' | 'info' | null = null;
+      let motivo = '';
+
+      if (enMora || vencido) {
+        nivel = 'critico';
+        if (enMora && vencido) {
+          motivo = `Cuenta en mora y contrato vencido en ${anioVencimiento}`;
+        } else if (enMora) {
+          motivo = 'Estado Mora — mantenimiento pendiente de pago';
+        } else {
+          motivo = `Contrato vencido desde el año ${anioVencimiento}`;
+        }
+      } else if (porVencer) {
+        nivel = 'advertencia';
+        motivo =
+          anioVencimiento === anioActual
+            ? `Vence este año (${anioVencimiento})`
+            : `Vence el próximo año (${anioVencimiento})`;
+      } else if (esPerpetuo) {
+        nivel = 'info';
+        motivo = 'Mantenimiento anual de contrato perpetuo';
+      }
+
+      if (!nivel) {
+        return [];
+      }
+
+      const sector =
+        registro.sector_camposanto || registro.codigo_lote || 'S/N';
+      const etiqueta =
+        registro.tipo_espacio === 'Camposanto' ? 'Camposanto' : 'Bloque';
+      const difunto =
+        [registro.nombre_difunto, registro.apellido_difunto]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Sin difunto registrado';
+
+      return [
+        {
+          id: registro.id,
+          nivel,
+          motivo,
+          difunto,
+          solicitante: registro.solicitante ?? null,
+          telefono_solicitante: registro.telefono_solicitante ?? null,
+          tipo_espacio: registro.tipo_espacio ?? 'Nicho',
+          ubicacion: `${etiqueta} ${sector} - Fila ${Number(
+            registro.fila,
+          )}, Columna ${Number(registro.columna)}`,
+          codigo_lote: registro.codigo_lote ?? null,
+          sector_camposanto: registro.sector_camposanto ?? null,
+          fila: Number(registro.fila),
+          columna: Number(registro.columna),
+          anio_vencimiento: anioVencimiento,
+          es_perpetuo: esPerpetuo,
+          estado: registro.estado,
+        },
+      ];
+    });
+
+    alertas.sort((a, b) => prioridad[a.nivel] - prioridad[b.nivel]);
+
+    return {
+      anio_actual: anioActual,
+      totalCriticos: alertas.filter((alerta) => alerta.nivel === 'critico')
+        .length,
+      totalAdvertencias: alertas.filter(
+        (alerta) => alerta.nivel === 'advertencia',
+      ).length,
+      totalPerpetuos: alertas.filter((alerta) => alerta.nivel === 'info')
+        .length,
+      totalAlertas: alertas.length,
+      alertas,
+    };
+  }
+
   /** Texto recortado; los campos vacíos se guardan como null. */
   private limpiarTexto(valor?: string | null): string | null {
     const texto = (valor ?? '').trim();

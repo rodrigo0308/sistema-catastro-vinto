@@ -58,6 +58,12 @@ export class CatastroController {
     return this.catastroService.actualizarNicho(id, datos);
   }
 
+  // Alertas de vencimiento, mora y control de contratos
+  @Get('alertas')
+  obtenerAlertas() {
+    return this.catastroService.obtenerAlertas();
+  }
+
   // Gestión especializada de sepulturas en tierra
   @Get('camposantos')
   obtenerCamposantos() {
