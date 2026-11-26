@@ -1,0 +1,207 @@
+<div class="camposantos-container">
+    <div class="header">
+        <div>
+            <h3>Camposantos</h3>
+            <p>Sepulturas en tierra individual del Cementerio Municipal — sector, régimen y observaciones de campo</p>
+        </div>
+        <button type="button" class="btn-nuevo" (click)="nuevoCamposanto()">+ Nuevo Camposanto</button>
+    </div>
+
+    <div class="alerta-exito" *ngIf="mensajeExito">
+        <strong>{{ mensajeExito }}</strong>
+        <button type="button" class="btn-cerrar-alerta" (click)="mensajeExito = ''">&times;</button>
+    </div>
+
+    <div class="error-msg" *ngIf="error">{{ error }}</div>
+
+    <!-- Formulario desplegable de alta / edición -->
+    <section class="card formulario" *ngIf="mostrarFormulario">
+        <h4>{{ editandoId ? 'Editar Camposanto' : 'Nuevo Camposanto' }}</h4>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="sector">Sector / Bloque del Camposanto</label>
+                <input id="sector" name="sector" type="text" class="form-control"
+                    [(ngModel)]="formulario.sector_camposanto" placeholder="Ej: Sector Norte" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="fila-campo">Fila</label>
+                <input id="fila-campo" name="fila-campo" type="number" min="1" step="1" class="form-control"
+                    [(ngModel)]="formulario.fila" placeholder="Ej: 1">
+            </div>
+
+            <div class="form-group">
+                <label for="sitio">Sitio / Columna</label>
+                <input id="sitio" name="sitio" type="number" min="1" step="1" class="form-control"
+                    [(ngModel)]="formulario.columna" placeholder="Ej: 4">
+            </div>
+
+            <div class="form-group">
+                <label for="estado-campo">Estado</label>
+                <select id="estado-campo" name="estado-campo" class="form-control" [(ngModel)]="formulario.estado">
+                    <option value="Ocupado">Ocupado</option>
+                    <option value="Mora">Mora</option>
+                    <option value="Libre">Libre</option>
+                </select>
+            </div>
+        </div>
+
+        <h4>Datos del Difunto</h4>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="apellido_paterno">Apellido Paterno</label>
+                <input id="apellido_paterno" name="apellido_paterno" type="text" class="form-control"
+                    [(ngModel)]="formulario.apellido_paterno" placeholder="Ej: Mamani" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="apellido_materno">Apellido Materno</label>
+                <input id="apellido_materno" name="apellido_materno" type="text" class="form-control"
+                    [(ngModel)]="formulario.apellido_materno" placeholder="Ej: Quispe" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="nombres">Nombres</label>
+                <input id="nombres" name="nombres" type="text" class="form-control" [(ngModel)]="formulario.nombres"
+                    placeholder="Ej: Juan Carlos" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="anio_defuncion">Año de Defunción / Entierro</label>
+                <input id="anio_defuncion" name="anio_defuncion" type="number" min="1900" max="2100" step="1"
+                    class="form-control" [(ngModel)]="formulario.anio_defuncion" placeholder="Ej: 2026">
+            </div>
+        </div>
+
+        <h4>Solicitante y Régimen</h4>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="solicitante">Familiar / Solicitante</label>
+                <input id="solicitante" name="solicitante" type="text" class="form-control"
+                    [(ngModel)]="formulario.solicitante" placeholder="Nombre completo del solicitante"
+                    autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="telefono_solicitante">Teléfono de contacto</label>
+                <input id="telefono_solicitante" name="telefono_solicitante" type="tel" class="form-control"
+                    [(ngModel)]="formulario.telefono_solicitante" placeholder="Ej: 71234567" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="resolucion">N° de Resolución Administrativa</label>
+                <input id="resolucion" name="resolucion" type="text" class="form-control"
+                    [(ngModel)]="formulario.resolucion" placeholder="Ej: RA. 045/2026" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+                <label for="plazo_campo">Plazo en Años</label>
+                <input id="plazo_campo" name="plazo_campo" type="number" min="1" step="1" class="form-control"
+                    [(ngModel)]="formulario.plazo_anios" [disabled]="formulario.es_perpetuo"
+                    placeholder="Ej: 5">
+            </div>
+
+            <div class="form-group">
+                <label for="monto_campo">Monto del Contrato (Bs.)</label>
+                <input id="monto_campo" name="monto_campo" type="number" min="0" step="0.01" class="form-control"
+                    [(ngModel)]="formulario.monto_contrato_bs" placeholder="Ej: 320">
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" name="es_perpetuo" [(ngModel)]="formulario.es_perpetuo">
+                    Régimen perpetuo (sin vencimiento)
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="observaciones">Observaciones de Campo</label>
+            <textarea id="observaciones" name="observaciones" rows="3" class="form-control"
+                [(ngModel)]="formulario.observaciones"
+                placeholder="Ej: Sepultura con jardinería, sin lápida, requiere limpieza del sector"></textarea>
+        </div>
+
+        <div class="error-msg" *ngIf="errorFormulario">{{ errorFormulario }}</div>
+
+        <div class="acciones-formulario">
+            <button type="button" class="btn-secundario" (click)="cancelarFormulario()">Cancelar</button>
+            <button type="button" class="btn-guardar" (click)="guardar()" [disabled]="guardando">
+                {{ guardando ? 'Guardando...' : (editandoId ? 'Guardar Cambios' : 'Registrar Camposanto') }}
+            </button>
+        </div>
+    </section>
+
+    <!-- Buscador en tiempo real y filtro de estado -->
+    <div class="barra-busqueda">
+        <input type="text" class="input-busqueda" [(ngModel)]="busqueda" name="busqueda"
+            placeholder="Buscar por apellido del difunto, solicitante o sector..." autocomplete="off"
+            aria-label="Buscar camposanto">
+
+        <select class="select-estado" [(ngModel)]="filtroEstado" name="filtroEstado">
+            <option value="Todos">Todos los estados</option>
+            <option value="Ocupado">Ocupado</option>
+            <option value="Mora">Mora</option>
+        </select>
+
+        <button type="button" class="btn-limpiar" *ngIf="busqueda || filtroEstado !== 'Todos'"
+            (click)="limpiarBusqueda()">Limpiar</button>
+    </div>
+
+    <div class="tabla-contenedor">
+        <table class="tabla-camposantos">
+            <thead>
+                <tr>
+                    <th>Sector / Ubicación</th>
+                    <th>Difunto</th>
+                    <th>Solicitante / Teléfono</th>
+                    <th>Régimen y Vencimiento</th>
+                    <th>Observaciones de campo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let registro of registrosFiltrados">
+                    <td>
+                        <strong>{{ registro.sector_camposanto || registro.codigo_lote || 'S/N' }}</strong>
+                        <small>Fila {{ registro.fila }}, Sitio {{ registro.columna }}</small>
+                    </td>
+                    <td>
+                        {{ nombreDifunto(registro) }}
+                        <small *ngIf="registro.anio_defuncion">Entierro: {{ registro.anio_defuncion }}</small>
+                    </td>
+                    <td>
+                        {{ registro.solicitante || 'Sin registro' }}
+                        <small *ngIf="registro.telefono_solicitante">{{ registro.telefono_solicitante }}</small>
+                    </td>
+                    <td>{{ regimen(registro) }}</td>
+                    <td class="celda-observaciones">{{ registro.observaciones || '—' }}</td>
+                    <td>
+                        <span class="badge" [ngClass]="claseEstado(registro.estado)">{{ registro.estado }}</span>
+                    </td>
+                    <td class="acciones">
+                        <button type="button" class="btn-accion btn-editar" (click)="editar(registro)">Editar</button>
+                        <button type="button" class="btn-accion btn-cobrar"
+                            (click)="cobrarMantenimiento(registro)">Cobrar Mantenimiento</button>
+                    </td>
+                </tr>
+
+                <tr *ngIf="!cargando && registrosFiltrados.length === 0">
+                    <td colspan="7" class="sin-datos">
+                        {{ registros.length === 0
+                            ? 'Todavía no hay camposantos registrados.'
+                            : 'No se encontraron camposantos con ese criterio de búsqueda.' }}
+                    </td>
+                </tr>
+
+                <tr *ngIf="cargando">
+                    <td colspan="7" class="sin-datos">Cargando camposantos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

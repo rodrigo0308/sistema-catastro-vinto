@@ -4,6 +4,35 @@
             <h3>Geovisor de Catastro</h3>
             <p>Visualización espacial de predios del GAM Vinto</p>
         </div>
+        <button
+            type="button"
+            class="btn-nuevo-bloque"
+            (click)="activarDibujo()"
+            [disabled]="modoDibujo"
+            title="Dibujar un nuevo bloque o mausoleo sobre el mapa"
+        >
+            + Agregar Bloque / Mausoleo
+        </button>
+    </div>
+
+    <!-- Barra del modo de dibujo por clics -->
+    <div class="barra-dibujo" *ngIf="modoDibujo">
+        <div class="texto-dibujo">
+            <strong>Dibujando nuevo bloque</strong>
+            <span>Haga clic en cada vértice del polígono sobre el mapa ({{ puntosDibujo.length }} marcados).</span>
+        </div>
+        <div class="acciones-dibujo">
+            <button
+                type="button"
+                class="btn-finalizar"
+                (click)="finalizarPoligono()"
+                [disabled]="puntosDibujo.length < 3"
+            >
+                Finalizar Polígono
+            </button>
+            <button type="button" class="btn-cancelar-dibujo" (click)="cancelarDibujo()">Cancelar</button>
+        </div>
+        <div class="error-dibujo" *ngIf="errorBloque">{{ errorBloque }}</div>
     </div>
 
     <!-- Buscador por apellido -->
@@ -140,6 +169,14 @@
                 </button>
 
                 <button
+                    class="btn-editar-registro"
+                    *ngIf="n.estado === 'Ocupado' || n.estado === 'Mora'"
+                    (click)="abrirEdicion(n)"
+                >
+                    Editar Registro
+                </button>
+
+                <button
                     class="btn-mantenimiento"
                     *ngIf="n.estado === 'Ocupado' || n.estado === 'Mora'"
                     (click)="pagarMantenimiento(n)"
@@ -153,4 +190,167 @@
             </p>
         </div>
     </aside>
+
+    <!-- Modal de edición de cualquier registro -->
+    <div class="modal-backdrop" *ngIf="modalEdicionAbierto" (click)="cerrarEdicion()">
+        <div class="modal" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h4>Editar Registro</h4>
+                    <small *ngIf="celdaSeleccionada as n">Fila {{ n.fila }}, Columna {{ n.columna }} — {{ n.estado }}</small>
+                </div>
+                <button type="button" class="btn-cerrar-modal" (click)="cerrarEdicion()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="edit-apellido-paterno">Apellido Paterno</label>
+                        <input id="edit-apellido-paterno" type="text" class="form-control"
+                            [(ngModel)]="formularioNicho.apellido_paterno" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-apellido-materno">Apellido Materno</label>
+                        <input id="edit-apellido-materno" type="text" class="form-control"
+                            [(ngModel)]="formularioNicho.apellido_materno" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-nombres">Nombres</label>
+                        <input id="edit-nombres" type="text" class="form-control"
+                            [(ngModel)]="formularioNicho.nombres" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-anio">Año de Defunción</label>
+                        <input id="edit-anio" type="number" min="1900" max="2100" class="form-control"
+                            [(ngModel)]="formularioNicho.anio_defuncion">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-solicitante">Solicitante</label>
+                        <input id="edit-solicitante" type="text" class="form-control"
+                            [(ngModel)]="formularioNicho.solicitante" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-telefono">Teléfono</label>
+                        <input id="edit-telefono" type="tel" class="form-control"
+                            [(ngModel)]="formularioNicho.telefono_solicitante" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-resolucion">Resolución</label>
+                        <input id="edit-resolucion" type="text" class="form-control"
+                            [(ngModel)]="formularioNicho.resolucion" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-tipo">Tipo de Espacio</label>
+                        <select id="edit-tipo" class="form-control" [(ngModel)]="formularioNicho.tipo_espacio">
+                            <option value="Nicho">Nicho</option>
+                            <option value="Mausoleo">Mausoleo</option>
+                            <option value="Camposanto">Camposanto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-estado">Estado</label>
+                        <select id="edit-estado" class="form-control" [(ngModel)]="formularioNicho.estado">
+                            <option value="Libre">Libre</option>
+                            <option value="Ocupado">Ocupado</option>
+                            <option value="Mora">Mora</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-plazo">Plazo en Años</label>
+                        <input id="edit-plazo" type="number" min="1" class="form-control"
+                            [(ngModel)]="formularioNicho.plazo_anios"
+                            [disabled]="formularioNicho.es_perpetuo">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-monto">Monto del Contrato (Bs.)</label>
+                        <input id="edit-monto" type="number" min="0" step="0.01" class="form-control"
+                            [(ngModel)]="formularioNicho.monto_contrato_bs">
+                    </div>
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" [(ngModel)]="formularioNicho.es_perpetuo">
+                            Régimen perpetuo
+                        </label>
+                    </div>
+                    <div class="form-group" *ngIf="formularioNicho.tipo_espacio === 'Camposanto'">
+                        <label for="edit-sector">Sector del Camposanto</label>
+                        <input id="edit-sector" type="text" class="form-control"
+                            [(ngModel)]="formularioNicho.sector_camposanto" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-observaciones">Observaciones</label>
+                    <textarea id="edit-observaciones" rows="3" class="form-control"
+                        [(ngModel)]="formularioNicho.observaciones"></textarea>
+                </div>
+
+                <div class="error-modal" *ngIf="errorEdicion">{{ errorEdicion }}</div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-secundario" (click)="cerrarEdicion()">Cancelar</button>
+                <button type="button" class="btn-modal-primario" (click)="guardarEdicion()"
+                    [disabled]="guardandoEdicion">
+                    {{ guardandoEdicion ? 'Guardando...' : 'Guardar Cambios' }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de datos del nuevo bloque dibujado -->
+    <div class="modal-backdrop" *ngIf="modalBloqueAbierto">
+        <div class="modal modal-bloque" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <div>
+                    <h4>Nuevo Bloque / Mausoleo</h4>
+                    <small>{{ puntosDibujo.length }} vértices marcados en el mapa</small>
+                </div>
+                <button type="button" class="btn-cerrar-modal" (click)="cancelarDibujo()">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="bloque-codigo">Nombre / Código del Bloque</label>
+                        <input id="bloque-codigo" type="text" class="form-control"
+                            [(ngModel)]="formularioBloque.codigo_lote"
+                            placeholder="Ej: Mausoleo 12-B" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="bloque-tipo">Tipo de Espacio</label>
+                        <select id="bloque-tipo" class="form-control"
+                            [(ngModel)]="formularioBloque.tipo_espacio_default">
+                            <option value="Nicho">Nicho</option>
+                            <option value="Mausoleo">Mausoleo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bloque-filas">Número de Filas</label>
+                        <input id="bloque-filas" type="number" min="1" step="1" class="form-control"
+                            [(ngModel)]="formularioBloque.filas">
+                    </div>
+                    <div class="form-group">
+                        <label for="bloque-columnas">Número de Columnas</label>
+                        <input id="bloque-columnas" type="number" min="1" step="1" class="form-control"
+                            [(ngModel)]="formularioBloque.columnas">
+                    </div>
+                </div>
+
+                <p class="nota-bloque">
+                    Se crearán {{ formularioBloque.filas * formularioBloque.columnas }} nichos en estado Libre.
+                </p>
+
+                <div class="error-modal" *ngIf="errorBloque">{{ errorBloque }}</div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-modal-secundario" (click)="cancelarDibujo()">Cancelar</button>
+                <button type="button" class="btn-modal-primario" (click)="guardarBloque()"
+                    [disabled]="guardandoBloque">
+                    {{ guardandoBloque ? 'Creando bloque...' : 'Crear Bloque' }}
+                </button>
+            </div>
+        </div>
+    </div>
 </div>

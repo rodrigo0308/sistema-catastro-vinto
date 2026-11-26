@@ -5,6 +5,7 @@ import { DashboardComponent } from './layout/dashboard/dashboard.component';
 import { CatastroComponent } from './modules/catastro/catastro.component';
 import { RecaudacionComponent } from './modules/recaudacion/recaudacion.component';
 import { RegistroDifuntosComponent } from './modules/registro/registro-difuntos.component';
+import { CamposantosComponent } from './modules/camposantos/camposantos.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -17,6 +18,7 @@ export const routes: Routes = [
       { path: 'catastro', component: CatastroComponent },
       { path: 'registro', component: RegistroDifuntosComponent },
       { path: 'recaudacion', component: RecaudacionComponent },
+      { path: 'camposantos', component: CamposantosComponent },
     ],
   },
 ];

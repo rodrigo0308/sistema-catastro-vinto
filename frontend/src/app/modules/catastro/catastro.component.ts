@@ -42,6 +42,39 @@ interface Nicho {
   es_perpetuo: boolean;
   anio_vencimiento: number | null;
   monto_contrato_bs: number | null;
+  apellido_paterno?: string | null;
+  apellido_materno?: string | null;
+  nombres?: string | null;
+  anio_defuncion?: number | null;
+  telefono_solicitante?: string | null;
+  sector_camposanto?: string | null;
+  observaciones?: string | null;
+}
+
+/** Datos editables de una celda desde el geovisor. */
+interface FormularioNicho {
+  apellido_paterno: string;
+  apellido_materno: string;
+  nombres: string;
+  anio_defuncion: number | null;
+  solicitante: string;
+  telefono_solicitante: string;
+  resolucion: string;
+  tipo_espacio: 'Nicho' | 'Mausoleo' | 'Camposanto';
+  estado: EstadoNicho;
+  es_perpetuo: boolean;
+  plazo_anios: number | null;
+  monto_contrato_bs: number | null;
+  sector_camposanto: string;
+  observaciones: string;
+}
+
+/** Datos del bloque/mausoleo dibujado sobre el mapa. */
+interface FormularioBloque {
+  codigo_lote: string;
+  filas: number;
+  columnas: number;
+  tipo_espacio_default: 'Nicho' | 'Mausoleo';
 }
 
 interface PanelBloque {
@@ -103,6 +136,21 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
   errorPanel = '';
   celdaSeleccionada: Nicho | null = null;
   nichoResaltado: { fila: number; columna: number } | null = null;
+
+  // Modal de edición de cualquier registro (nichos, mausoleos, camposantos)
+  modalEdicionAbierto = false;
+  formularioNicho: FormularioNicho = this.formularioNichoVacio();
+  guardandoEdicion = false;
+  errorEdicion = '';
+
+  // Dibujo de un nuevo bloque/mausoleo sobre el mapa
+  modoDibujo = false;
+  puntosDibujo: L.LatLng[] = [];
+  modalBloqueAbierto = false;
+  formularioBloque: FormularioBloque = this.formularioBloqueVacio();
+  guardandoBloque = false;
+  errorBloque = '';
+  private capaDibujo?: L.LayerGroup;
 
   // Arrastre de la ventana flotante dentro del contenedor del mapa
   arrastrando = false;
@@ -182,8 +230,14 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
       },
     ).addTo(this.map);
 
-    // Un clic en el mapa (fuera de un bloque) oculta el panel
-    this.map.on('click', () => this.cerrarPanel());
+    // Un clic en el mapa agrega un vértice en modo dibujo; si no, oculta el panel
+    this.map.on('click', (evento: L.LeafletMouseEvent) => {
+      if (this.modoDibujo) {
+        this.agregarVertice(evento.latlng);
+        return;
+      }
+      this.cerrarPanel();
+    });
   }
 
   /**
@@ -323,6 +377,8 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
    * o cuando su panel está abierto.
    */
   private dibujarBloques(geojsonData: any): void {
+    this.capaBloques?.remove();
+
     this.capaBloques = L.geoJSON(geojsonData, {
       style: () => ({ ...this.ESTILO_BLOQUE }),
       onEachFeature: (feature, layer) => {
@@ -743,5 +799,282 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
 
   etiquetaResultado(resultado: ResultadoBusqueda): string {
     return `${resultado.codigo_lote} - Fila ${resultado.fila}, Columna ${resultado.columna}`;
+  }
+
+  /** Formulario vacío para el modal de edición. */
+  private formularioNichoVacio(): FormularioNicho {
+    return {
+      apellido_paterno: '',
+      apellido_materno: '',
+      nombres: '',
+      anio_defuncion: null,
+      solicitante: '',
+      telefono_solicitante: '',
+      resolucion: '',
+      tipo_espacio: 'Nicho',
+      estado: 'Ocupado',
+      es_perpetuo: false,
+      plazo_anios: null,
+      monto_contrato_bs: null,
+      sector_camposanto: '',
+      observaciones: '',
+    };
+  }
+
+  private formularioBloqueVacio(): FormularioBloque {
+    return {
+      codigo_lote: '',
+      filas: 1,
+      columnas: 1,
+      tipo_espacio_default: 'Nicho',
+    };
+  }
+
+  private aNumero(valor: unknown): number | null {
+    if (valor === null || valor === undefined || valor === ('' as unknown)) {
+      return null;
+    }
+    const numero = Number(valor);
+    return Number.isFinite(numero) ? numero : null;
+  }
+
+  // ---------- Edición de un registro desde el geovisor ----------
+
+  abrirEdicion(nicho: Nicho): void {
+    this.formularioNicho = {
+      apellido_paterno: nicho.apellido_paterno ?? '',
+      apellido_materno: nicho.apellido_materno ?? '',
+      nombres: nicho.nombres ?? nicho.nombre_difunto ?? '',
+      anio_defuncion: nicho.anio_defuncion ?? null,
+      solicitante: nicho.solicitante ?? '',
+      telefono_solicitante: nicho.telefono_solicitante ?? '',
+      resolucion: nicho.resolucion ?? '',
+      tipo_espacio: nicho.tipo_espacio ?? 'Nicho',
+      estado: nicho.estado,
+      es_perpetuo: nicho.es_perpetuo === true,
+      plazo_anios: nicho.plazo_anios ?? null,
+      monto_contrato_bs: nicho.monto_contrato_bs ?? null,
+      sector_camposanto: nicho.sector_camposanto ?? '',
+      observaciones: nicho.observaciones ?? '',
+    };
+    this.errorEdicion = '';
+    this.guardandoEdicion = false;
+    this.modalEdicionAbierto = true;
+  }
+
+  cerrarEdicion(): void {
+    this.modalEdicionAbierto = false;
+    this.guardandoEdicion = false;
+    this.errorEdicion = '';
+  }
+
+  /** Guarda los cambios con PATCH /catastro/nichos/:id y refresca la grilla. */
+  guardarEdicion(): void {
+    const celda = this.celdaSeleccionada;
+    if (!celda) {
+      return;
+    }
+
+    const formulario = this.formularioNicho;
+
+    if (!formulario.apellido_paterno.trim() && !formulario.nombres.trim()) {
+      this.errorEdicion =
+        'Ingrese al menos el apellido o los nombres del difunto.';
+      return;
+    }
+
+    this.guardandoEdicion = true;
+    this.errorEdicion = '';
+
+    this.http
+      .patch(`${API_URL}/catastro/nichos/${celda.id}`, {
+        apellido_paterno: formulario.apellido_paterno.trim(),
+        apellido_materno: formulario.apellido_materno.trim(),
+        nombres: formulario.nombres.trim(),
+        anio_defuncion: this.aNumero(formulario.anio_defuncion),
+        solicitante: formulario.solicitante.trim(),
+        telefono_solicitante: formulario.telefono_solicitante.trim(),
+        resolucion: formulario.resolucion.trim(),
+        tipo_espacio: formulario.tipo_espacio,
+        estado: formulario.estado,
+        es_perpetuo: formulario.es_perpetuo,
+        plazo_anios: formulario.es_perpetuo
+          ? null
+          : this.aNumero(formulario.plazo_anios),
+        monto_contrato_bs: this.aNumero(formulario.monto_contrato_bs),
+        sector_camposanto: formulario.sector_camposanto.trim(),
+        observaciones: formulario.observaciones.trim(),
+      })
+      .subscribe({
+        next: () => {
+          this.guardandoEdicion = false;
+          this.modalEdicionAbierto = false;
+          this.abrirBloque(celda.predio_id, {
+            fila: celda.fila,
+            columna: celda.columna,
+          });
+        },
+        error: (err) => {
+          console.error('Error al actualizar el registro:', err);
+          this.guardandoEdicion = false;
+          this.errorEdicion =
+            err?.error?.message ??
+            'No se pudo guardar el registro. Verifique los datos ingresados.';
+        },
+      });
+  }
+
+  // ---------- Dibujo de un nuevo bloque / mausoleo ----------
+
+  /** Activa el modo de dibujo por clics sobre el mapa satelital. */
+  activarDibujo(): void {
+    this.modalEdicionAbierto = false;
+    this.cerrarPanel();
+
+    this.modoDibujo = true;
+    this.puntosDibujo = [];
+    this.errorBloque = '';
+
+    this.capaDibujo?.remove();
+    this.capaDibujo = L.layerGroup().addTo(this.map);
+
+    this.map.doubleClickZoom.disable();
+    this.map.getContainer().style.cursor = 'crosshair';
+  }
+
+  private agregarVertice(latlng: L.LatLng): void {
+    this.puntosDibujo.push(latlng);
+    this.dibujarPreliminar();
+  }
+
+  /** Marcadores temporales, línea y polígono preliminar del dibujo. */
+  private dibujarPreliminar(): void {
+    if (!this.capaDibujo) {
+      return;
+    }
+
+    this.capaDibujo.clearLayers();
+
+    this.puntosDibujo.forEach((punto, indice) => {
+      L.circleMarker(punto, {
+        radius: 6,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#f97316',
+        fillOpacity: 1,
+      })
+        .bindTooltip(`Vértice ${indice + 1}`, { direction: 'top' })
+        .addTo(this.capaDibujo!);
+    });
+
+    if (this.puntosDibujo.length >= 2) {
+      L.polyline(this.puntosDibujo, {
+        color: '#f97316',
+        weight: 3,
+        dashArray: '6, 4',
+      }).addTo(this.capaDibujo);
+    }
+
+    if (this.puntosDibujo.length >= 3) {
+      L.polygon(this.puntosDibujo, {
+        color: '#f97316',
+        weight: 2,
+        fillColor: '#fb923c',
+        fillOpacity: 0.25,
+      }).addTo(this.capaDibujo);
+    }
+  }
+
+  finalizarPoligono(): void {
+    if (this.puntosDibujo.length < 3) {
+      this.errorBloque = 'Marque al menos 3 vértices sobre el mapa.';
+      return;
+    }
+
+    this.formularioBloque = this.formularioBloqueVacio();
+    this.errorBloque = '';
+    this.modalBloqueAbierto = true;
+  }
+
+  cancelarDibujo(): void {
+    this.modoDibujo = false;
+    this.puntosDibujo = [];
+    this.modalBloqueAbierto = false;
+    this.guardandoBloque = false;
+    this.errorBloque = '';
+    this.capaDibujo?.clearLayers();
+    this.capaDibujo?.remove();
+    this.capaDibujo = undefined;
+
+    if (this.map) {
+      this.map.doubleClickZoom.enable();
+      this.map.getContainer().style.cursor = '';
+    }
+  }
+
+  /** Crea el bloque en el backend y recarga las capas GeoJSON del mapa. */
+  guardarBloque(): void {
+    const formulario = this.formularioBloque;
+    const codigo = formulario.codigo_lote.trim();
+
+    if (!codigo) {
+      this.errorBloque = 'Ingrese el nombre o código del mausoleo/bloque.';
+      return;
+    }
+
+    const filas = Math.trunc(Number(formulario.filas));
+    const columnas = Math.trunc(Number(formulario.columnas));
+
+    if (!Number.isFinite(filas) || filas < 1 || !Number.isFinite(columnas) || columnas < 1) {
+      this.errorBloque = 'Indique al menos 1 fila y 1 columna.';
+      return;
+    }
+
+    this.guardandoBloque = true;
+    this.errorBloque = '';
+
+    this.http
+      .post<{ bloque?: { id: string } }>(`${API_URL}/catastro/bloques`, {
+        codigo_lote: codigo,
+        filas,
+        columnas,
+        tipo_espacio_default: formulario.tipo_espacio_default,
+        estado: 'Libre',
+        coordenadas: this.puntosDibujo.map((punto) => [punto.lng, punto.lat]),
+      })
+      .subscribe({
+        next: (respuesta) => {
+          const predioId = respuesta?.bloque?.id;
+          this.guardandoBloque = false;
+          this.cancelarDibujo();
+          this.recargarCapas(() => {
+            if (!predioId) {
+              return;
+            }
+            this.enfocarBloque(predioId);
+            this.abrirBloque(predioId);
+          });
+        },
+        error: (err) => {
+          console.error('Error al crear el bloque:', err);
+          this.guardandoBloque = false;
+          this.errorBloque =
+            err?.error?.message ??
+            'No se pudo crear el bloque. Verifique el código y el polígono dibujado.';
+        },
+      });
+  }
+
+  /** Vuelve a pedir el GeoJSON de bloques y lo redibuja en el mapa. */
+  private recargarCapas(alTerminar?: () => void): void {
+    this.http.get<any>(`${API_URL}/catastro/mapa`).subscribe({
+      next: (mapa) => {
+        this.dibujarBloques(mapa);
+        alTerminar?.();
+      },
+      error: (err) => {
+        console.error('Error al recargar los bloques del mapa:', err);
+      },
+    });
   }
 }
