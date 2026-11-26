@@ -1,0 +1,193 @@
+<div class="portal">
+    <!-- Cabecera institucional -->
+    <header class="cabecera">
+        <div class="cabecera-institucional">
+            <img src="assets/escudo-vinto.jpg" alt="Escudo del Gobierno Autónomo Municipal de Vinto" class="escudo">
+            <div class="titulos">
+                <span class="estado-plurinacional">Estado Plurinacional de Bolivia — Municipio de Vinto</span>
+                <h1>GOBIERNO AUTÓNOMO MUNICIPAL DE VINTO</h1>
+                <p>Portal de Consulta Ciudadana del Cementerio Municipal</p>
+            </div>
+        </div>
+
+        <a class="btn-funcionarios" routerLink="/login">
+            <span>Acceso Funcionarios</span>
+            <small>Iniciar Sesión</small>
+        </a>
+    </header>
+
+    <main class="contenido">
+        <nav class="migas" aria-label="Ubicación">Inicio / Consulta Ciudadana</nav>
+
+        <section class="introduccion">
+            <h2>Consulta de Nichos y Estado de Cuenta</h2>
+            <p>
+                Verifique la ubicación del espacio, el régimen de uso y la situación de pagos
+                del Cementerio Municipal. La consulta es libre y no requiere registro.
+            </p>
+        </section>
+
+        <!-- Tarjeta central de consulta -->
+        <section class="tarjeta-consulta">
+            <h3 class="titulo-seccion">DATOS DE BÚSQUEDA — CONSULTA DE NICHO / DEUDA</h3>
+
+            <form (ngSubmit)="buscar()" novalidate>
+                <div class="campos">
+                    <div class="campo">
+                        <label for="criterio">Criterio de búsqueda</label>
+                        <select id="criterio" name="criterio" [(ngModel)]="criterio">
+                            <option value="difunto">Apellidos y Nombres del Difunto</option>
+                            <option value="lote">Código de Bloque / Lote</option>
+                        </select>
+                    </div>
+
+                    <div class="campo">
+                        <label for="termino">
+                            {{ criterio === 'difunto' ? 'Apellidos y Nombres del Difunto' : 'Código de Bloque / Lote' }}
+                        </label>
+                        <input id="termino" name="termino" type="text" [(ngModel)]="termino"
+                            [placeholder]="criterio === 'difunto'
+                                ? 'Ej: Mamani Quispe'
+                                : 'Ej: BLOQUE-A'"
+                            autocomplete="off">
+                        <small class="ayuda">Mínimo 3 caracteres. No distingue mayúsculas ni tildes parciales.</small>
+                    </div>
+                </div>
+
+                <div class="captcha">
+                    <label for="captcha">Verificación de seguridad</label>
+                    <div class="captcha-fila">
+                        <div class="codigo-captcha" aria-label="Código de verificación">{{ codigoCaptcha }}</div>
+                        <button type="button" class="btn-actualizar" (click)="generarCaptcha()">Actualizar</button>
+                        <input id="captcha" name="captcha" type="text" maxlength="5" [(ngModel)]="captchaIngresado"
+                            placeholder="Escriba el código" autocomplete="off" aria-label="Escriba el código de verificación">
+                    </div>
+                    <small class="ayuda">Escriba el código de 5 caracteres para evitar consultas automatizadas.</small>
+                </div>
+
+                <div class="mensaje-error" *ngIf="error" role="alert">{{ error }}</div>
+
+                <div class="acciones">
+                    <button type="submit" class="btn-buscar" [disabled]="buscando">
+                        {{ buscando ? 'Consultando...' : 'Buscar' }}
+                    </button>
+                    <button type="button" class="btn-nueva" (click)="nuevaBusqueda()">Nueva Búsqueda</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Resultados -->
+        <section class="tarjeta-resultados" *ngIf="busquedaRealizada">
+            <div class="encabezado-resultados">
+                <h3>Resultados de la consulta</h3>
+                <span class="chip">{{ resultados.length }} registro(s) para "{{ consultaAplicada }}"</span>
+            </div>
+
+            <div class="tabla-contenedor" *ngIf="resultados.length > 0; else sinResultados">
+                <table class="tabla-resultados">
+                    <thead>
+                        <tr>
+                            <th>Difunto</th>
+                            <th>Tipo de espacio</th>
+                            <th>Ubicación</th>
+                            <th>Vigencia / Régimen</th>
+                            <th>Estado</th>
+                            <th>Mapa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let registro of resultados">
+                            <td>
+                                <strong>{{ registro.difunto }}</strong>
+                                <small *ngIf="registro.titular_referencia">
+                                    Titular: {{ registro.titular_referencia }}
+                                </small>
+                            </td>
+                            <td>{{ registro.tipo_espacio }}</td>
+                            <td>
+                                <strong>{{ registro.bloque_sector }}</strong>
+                                <small>Fila {{ registro.fila }} · Columna {{ registro.columna }}</small>
+                            </td>
+                            <td>{{ registro.regimen }}</td>
+                            <td>
+                                <span class="estado" [ngClass]="claseEstado(registro)">
+                                    {{ registro.estado_ciudadano }}
+                                </span>
+                            </td>
+                            <td>
+                                <button type="button" class="btn-mapa" (click)="verMapa(registro)"
+                                    [disabled]="!registro.centroide">
+                                    Ver Ubicación en el Mapa
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <ng-template #sinResultados>
+                <p class="sin-resultados">
+                    No se encontraron registros con el dato ingresado. Verifique la escritura del
+                    apellido o del código de bloque, o apersónese a las oficinas del Cementerio Municipal.
+                </p>
+            </ng-template>
+
+            <p class="nota-privacidad">
+                La información corresponde exclusivamente al registro funerario y se muestra con fines
+                de consulta ciudadana. Los trámites y pagos se realizan de forma presencial en caja.
+            </p>
+        </section>
+    </main>
+
+    <!-- Pie institucional -->
+    <footer class="pie">
+        <div class="pie-contenido">
+            <div class="pie-bloque">
+                <h4>Unidad de Recaudaciones</h4>
+                <p>Cementerio Municipal del GAM Vinto</p>
+                <ul>
+                    <li><span>Lunes a Viernes</span>07:00 a 15:00</li>
+                    <li><span>Sábado y Domingo</span>07:00 a 12:00</li>
+                </ul>
+            </div>
+
+            <div class="pie-bloque">
+                <h4>Aviso importante</h4>
+                <p>
+                    Los pagos de mantenimiento, regularizaciones de contrato y trámites de
+                    inhumación se realizan únicamente de forma presencial en la Unidad de
+                    Recaudaciones, presentando la documentación correspondiente.
+                </p>
+            </div>
+        </div>
+
+        <p class="pie-legal">
+            © 2026 Gobierno Autónomo Municipal de Vinto — Sistema de Catastro y Recaudación
+            del Cementerio Municipal.
+        </p>
+    </footer>
+
+    <!-- Modal con mini-mapa de solo lectura -->
+    <div class="modal-fondo" *ngIf="modalMapaAbierto" (click)="cerrarMapa()">
+        <div class="modal-mapa" role="dialog" aria-modal="true" aria-label="Ubicación del espacio"
+            (click)="$event.stopPropagation()">
+            <div class="modal-cabecera">
+                <div>
+                    <h3>Ubicación del espacio</h3>
+                    <p *ngIf="resultadoMapa">
+                        {{ resultadoMapa.bloque_sector }} — Fila {{ resultadoMapa.fila }},
+                        Columna {{ resultadoMapa.columna }}
+                    </p>
+                </div>
+                <button type="button" class="btn-cerrar" (click)="cerrarMapa()" aria-label="Cerrar">&times;</button>
+            </div>
+
+            <div id="mapa-publico" class="mapa-publico"></div>
+
+            <p class="mapa-leyenda">
+                Imagen satelital de referencia — solo lectura. El marcador señala el bloque o sector
+                del espacio consultado.
+            </p>
+        </div>
+    </div>
+</div>

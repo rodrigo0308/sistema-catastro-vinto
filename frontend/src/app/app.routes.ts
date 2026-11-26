@@ -7,9 +7,11 @@ import { RecaudacionComponent } from './modules/recaudacion/recaudacion.componen
 import { RegistroDifuntosComponent } from './modules/registro/registro-difuntos.component';
 import { CamposantosComponent } from './modules/camposantos/camposantos.component';
 import { NotificacionesComponent } from './modules/notificaciones/notificaciones.component';
+import { PortalPublicoComponent } from './publico/portal-publico.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  // Portal ciudadano abierto: pantalla inicial de la aplicación.
+  { path: '', component: PortalPublicoComponent },
   { path: 'login', component: LoginComponent },
   {
     path: 'dashboard',

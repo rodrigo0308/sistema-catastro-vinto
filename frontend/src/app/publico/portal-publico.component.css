@@ -1,0 +1,600 @@
+.portal {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #eef2f6;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #1e293b;
+}
+
+/* ---------- Cabecera institucional ---------- */
+
+.cabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 18px 32px;
+    background: linear-gradient(135deg, #0b3b63 0%, #0e4f7b 55%, #0f7a4d 100%);
+    border-bottom: 4px solid #c9a227;
+    color: #fff;
+    flex-wrap: wrap;
+}
+
+.cabecera-institucional {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.escudo {
+    width: 70px;
+    height: auto;
+    border-radius: 6px;
+    background: #fff;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.titulos h1 {
+    margin: 0;
+    font-size: 1.35em;
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+}
+
+.titulos p {
+    margin: 4px 0 0;
+    font-size: 0.95em;
+    color: #d7e9f7;
+}
+
+.estado-plurinacional {
+    display: block;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #c9a227;
+    margin-bottom: 4px;
+}
+
+.btn-funcionarios {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 11px 20px;
+    background: #fff;
+    color: #0b3b63;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9em;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-funcionarios small {
+    font-weight: 600;
+    font-size: 0.78em;
+    color: #0f7a4d;
+}
+
+.btn-funcionarios:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.28);
+}
+
+/* ---------- Contenido ---------- */
+
+.contenido {
+    flex: 1;
+    width: 100%;
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 22px 24px 40px;
+    box-sizing: border-box;
+}
+
+.migas {
+    font-size: 0.78em;
+    color: #64748b;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.introduccion {
+    margin-bottom: 20px;
+}
+
+.introduccion h2 {
+    margin: 0 0 6px;
+    font-size: 1.5em;
+    color: #0b3b63;
+}
+
+.introduccion p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.92em;
+    max-width: 780px;
+}
+
+/* ---------- Tarjeta de consulta ---------- */
+
+.tarjeta-consulta {
+    background: #fff;
+    border-radius: 8px;
+    border-top: 4px solid #0b3b63;
+    box-shadow: 0 3px 14px rgba(15, 42, 66, 0.12);
+    padding: 22px 26px 26px;
+    margin-bottom: 24px;
+}
+
+.titulo-seccion {
+    margin: 0 0 18px;
+    font-size: 0.92em;
+    letter-spacing: 0.04em;
+    color: #0b3b63;
+    border-bottom: 1px solid #dbe4ec;
+    padding-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.campos {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 18px;
+}
+
+.campo label,
+.captcha > label {
+    display: block;
+    font-size: 0.82em;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.campo input,
+.campo select,
+.captcha input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #b9c7d4;
+    border-radius: 5px;
+    font-size: 0.92em;
+    font-family: inherit;
+    box-sizing: border-box;
+    background: #fff;
+    color: #1e293b;
+}
+
+.campo input:focus,
+.campo select:focus,
+.captcha input:focus {
+    outline: none;
+    border-color: #0e4f7b;
+    box-shadow: 0 0 0 3px rgba(14, 79, 123, 0.15);
+}
+
+.ayuda {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.76em;
+    color: #64748b;
+}
+
+.captcha {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: #f4f7fa;
+    border: 1px dashed #b9c7d4;
+    border-radius: 6px;
+}
+
+.captcha-fila {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.codigo-captcha {
+    padding: 8px 16px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: #0b3b63;
+    background: #fdf6e3;
+    border: 1px solid #c9a227;
+    border-radius: 4px;
+    user-select: none;
+    text-decoration: line-through;
+    text-decoration-color: rgba(11, 59, 99, 0.35);
+}
+
+.btn-actualizar {
+    padding: 8px 12px;
+    border: 1px solid #0e4f7b;
+    background: #fff;
+    color: #0e4f7b;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-actualizar:hover {
+    background: #e8f1f8;
+}
+
+.captcha input {
+    flex: 1;
+    min-width: 170px;
+    max-width: 230px;
+}
+
+.mensaje-error {
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: #fdecea;
+    border-left: 4px solid #dc2626;
+    border-radius: 4px;
+    color: #991b1b;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.acciones {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-buscar,
+.btn-nueva {
+    padding: 11px 30px;
+    border-radius: 5px;
+    border: none;
+    font-size: 0.92em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-buscar {
+    background: #0b3b63;
+    color: #fff;
+    min-width: 150px;
+}
+
+.btn-buscar:hover:not(:disabled) {
+    background: #0e4f7b;
+}
+
+.btn-buscar:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+}
+
+.btn-nueva {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.btn-nueva:hover {
+    background: #cbd5e1;
+}
+
+/* ---------- Resultados ---------- */
+
+.tarjeta-resultados {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 3px 14px rgba(15, 42, 66, 0.12);
+    padding: 20px 24px 22px;
+}
+
+.encabezado-resultados {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.encabezado-resultados h3 {
+    margin: 0;
+    font-size: 1.05em;
+    color: #0b3b63;
+}
+
+.chip {
+    padding: 4px 12px;
+    background: #e8f1f8;
+    color: #0e4f7b;
+    border-radius: 12px;
+    font-size: 0.78em;
+    font-weight: 700;
+}
+
+.tabla-contenedor {
+    overflow-x: auto;
+    border: 1px solid #dbe4ec;
+    border-radius: 6px;
+}
+
+.tabla-resultados {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.87em;
+}
+
+.tabla-resultados th {
+    background: #0b3b63;
+    color: #fff;
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.tabla-resultados td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #eef2f6;
+    color: #334155;
+    vertical-align: top;
+}
+
+.tabla-resultados tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.tabla-resultados tbody tr:hover {
+    background: #f7fafc;
+}
+
+.tabla-resultados small {
+    display: block;
+    margin-top: 3px;
+    font-size: 0.8em;
+    color: #64748b;
+}
+
+.estado {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 0.78em;
+    font-weight: 700;
+    max-width: 210px;
+}
+
+.estado-vigente {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.estado-deuda {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.btn-mapa {
+    padding: 8px 12px;
+    border: 1px solid #0e4f7b;
+    background: #fff;
+    color: #0e4f7b;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-mapa:hover:not(:disabled) {
+    background: #e8f1f8;
+}
+
+.btn-mapa:disabled {
+    border-color: #cbd5e1;
+    color: #94a3b8;
+    cursor: not-allowed;
+}
+
+.sin-resultados {
+    margin: 6px 0 14px;
+    padding: 18px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 6px;
+    color: #475569;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.nota-privacidad {
+    margin: 14px 0 0;
+    font-size: 0.76em;
+    color: #64748b;
+    line-height: 1.5;
+}
+
+/* ---------- Pie institucional ---------- */
+
+.pie {
+    background: #0b3b63;
+    color: #e2ecf5;
+    padding: 26px 32px 16px;
+    border-top: 4px solid #c9a227;
+}
+
+.pie-contenido {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 26px;
+    max-width: 1060px;
+    margin: 0 auto;
+}
+
+.pie-bloque h4 {
+    margin: 0 0 8px;
+    color: #c9a227;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.pie-bloque p {
+    margin: 0 0 8px;
+    font-size: 0.84em;
+    line-height: 1.55;
+    color: #d7e9f7;
+}
+
+.pie-bloque ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.pie-bloque li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.84em;
+}
+
+.pie-bloque li span {
+    color: #9fc4dd;
+}
+
+.pie-legal {
+    max-width: 1060px;
+    margin: 18px auto 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.75em;
+    color: #9fc4dd;
+    text-align: center;
+}
+
+/* ---------- Modal del mapa ---------- */
+
+.modal-fondo {
+    position: fixed;
+    inset: 0;
+    background: rgba(8, 24, 38, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1200;
+}
+
+.modal-mapa {
+    width: 100%;
+    max-width: 720px;
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+}
+
+.modal-cabecera {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 20px;
+    background: #0b3b63;
+    color: #fff;
+}
+
+.modal-cabecera h3 {
+    margin: 0;
+    font-size: 1em;
+}
+
+.modal-cabecera p {
+    margin: 4px 0 0;
+    font-size: 0.82em;
+    color: #cfe3f2;
+}
+
+.btn-cerrar {
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 1.7em;
+    line-height: 0.9;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.mapa-publico {
+    height: 380px;
+    width: 100%;
+    background: #0f172a;
+}
+
+.mapa-leyenda {
+    margin: 0;
+    padding: 11px 18px 14px;
+    font-size: 0.78em;
+    color: #64748b;
+}
+
+/* ---------- Responsivo ---------- */
+
+@media (max-width: 820px) {
+    .cabecera {
+        padding: 16px 20px;
+    }
+
+    .campos,
+    .pie-contenido {
+        grid-template-columns: 1fr;
+    }
+
+    .titulos h1 {
+        font-size: 1.05em;
+    }
+
+    .titulo-seccion {
+        font-size: 0.82em;
+    }
+
+    .mapa-publico {
+        height: 300px;
+    }
+}
+
+@media (max-width: 520px) {
+    .contenido {
+        padding: 16px 14px 30px;
+    }
+
+    .tarjeta-consulta,
+    .tarjeta-resultados {
+        padding: 16px;
+    }
+
+    .escudo {
+        width: 52px;
+    }
+
+    .btn-funcionarios {
+        width: 100%;
+    }
+}
