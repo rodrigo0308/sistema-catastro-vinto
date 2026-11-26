@@ -201,34 +201,47 @@
     flex-wrap: wrap;
 }
 
-.codigo-captcha {
-    padding: 8px 16px;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 1.3em;
-    font-weight: 700;
-    letter-spacing: 0.22em;
-    color: #0b3b63;
-    background: #fdf6e3;
-    border: 1px solid #c9a227;
+.captcha-canvas {
+    display: block;
+    width: 180px;
+    height: 52px;
+    border: 1px solid #b9c7d4;
     border-radius: 4px;
+    box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.12);
+    background: #f8fafc;
+    flex: 0 0 auto;
     user-select: none;
-    text-decoration: line-through;
-    text-decoration-color: rgba(11, 59, 99, 0.35);
 }
 
 .btn-actualizar {
-    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 13px;
     border: 1px solid #0e4f7b;
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff 0%, #e8f1f8 100%);
     color: #0e4f7b;
     border-radius: 4px;
     font-size: 0.8em;
     font-weight: 700;
+    font-family: inherit;
+    letter-spacing: 0.01em;
     cursor: pointer;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-actualizar svg {
+    flex: 0 0 auto;
 }
 
 .btn-actualizar:hover {
-    background: #e8f1f8;
+    background: #dcebf6;
+    box-shadow: 0 1px 4px rgba(14, 79, 123, 0.2);
+}
+
+.btn-actualizar:active svg {
+    transform: rotate(-90deg);
+    transition: transform 0.2s ease;
 }
 
 .captcha input {

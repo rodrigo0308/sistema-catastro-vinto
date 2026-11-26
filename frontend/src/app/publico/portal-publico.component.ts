@@ -1,4 +1,10 @@
-import { Component, OnDestroy } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  OnDestroy,
+  ViewChild,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -48,7 +54,10 @@ interface RespuestaConsulta {
   templateUrl: './portal-publico.component.html',
   styleUrl: './portal-publico.component.css',
 })
-export class PortalPublicoComponent implements OnDestroy {
+export class PortalPublicoComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('captchaCanvas')
+  private captchaCanvas?: ElementRef<HTMLCanvasElement>;
+
   criterio: CriterioBusqueda = 'difunto';
   termino = '';
 
@@ -71,11 +80,15 @@ export class PortalPublicoComponent implements OnDestroy {
     this.generarCaptcha();
   }
 
+  ngAfterViewInit(): void {
+    this.dibujarCaptcha();
+  }
+
   ngOnDestroy(): void {
     this.destruirMapa();
   }
 
-  /** Nuevo código alfanumérico de 5 caracteres. */
+  /** Nuevo código alfanumérico de 5 caracteres dibujado en el canvas. */
   generarCaptcha(): void {
     let codigo = '';
 
@@ -87,6 +100,102 @@ export class PortalPublicoComponent implements OnDestroy {
 
     this.codigoCaptcha = codigo;
     this.captchaIngresado = '';
+    this.dibujarCaptcha();
+  }
+
+  /**
+   * Captcha gráfico tipo RUAT/SEGIP: fondo con gradiente y ruido, líneas
+   * diagonales y cada carácter rotado con la paleta institucional.
+   */
+  private dibujarCaptcha(): void {
+    const canvas = this.captchaCanvas?.nativeElement;
+    const ctx = canvas?.getContext('2d');
+
+    if (!canvas || !ctx) {
+      return;
+    }
+
+    const ancho = canvas.width;
+    const alto = canvas.height;
+    const aleatorio = (min: number, max: number) =>
+      min + Math.random() * (max - min);
+
+    // Fondo claro con gradiente suave.
+    const gradiente = ctx.createLinearGradient(0, 0, ancho, alto);
+    gradiente.addColorStop(0, '#fbfcfe');
+    gradiente.addColorStop(0.55, '#eef3f8');
+    gradiente.addColorStop(1, '#e2eaf2');
+    ctx.fillStyle = gradiente;
+    ctx.fillRect(0, 0, ancho, alto);
+
+    // Cuadrícula sutil y puntos de ruido visual.
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.12)';
+    ctx.lineWidth = 1;
+    for (let x = 12; x < ancho; x += 18) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, alto);
+      ctx.stroke();
+    }
+    for (let y = 10; y < alto; y += 13) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(ancho, y);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 180; i++) {
+      ctx.fillStyle = `rgba(51, 65, 85, ${aleatorio(0.05, 0.2).toFixed(2)})`;
+      ctx.beginPath();
+      ctx.arc(aleatorio(0, ancho), aleatorio(0, alto), aleatorio(0.5, 1.4), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Líneas curvas semitransparentes que cruzan el código.
+    const lineas: Array<{ color: string; offset: number }> = [
+      { color: 'rgba(11, 59, 99, 0.28)', offset: -8 },
+      { color: 'rgba(15, 122, 77, 0.25)', offset: 4 },
+      { color: 'rgba(127, 29, 29, 0.22)', offset: 12 },
+    ];
+    lineas.forEach((linea) => {
+      ctx.strokeStyle = linea.color;
+      ctx.lineWidth = aleatorio(1.2, 2.2);
+      ctx.beginPath();
+      ctx.moveTo(-6, aleatorio(8, alto - 8));
+      ctx.bezierCurveTo(
+        ancho * 0.3,
+        alto / 2 + linea.offset * 2,
+        ancho * 0.7,
+        alto / 2 - linea.offset * 2,
+        ancho + 6,
+        aleatorio(8, alto - 8),
+      );
+      ctx.stroke();
+    });
+
+    // Caracteres: bold, rotación leve y paleta institucional oscura.
+    const colores = ['#0b3b63', '#14532d', '#7f1d1d', '#334155', '#1e3a5f'];
+    const caracteres = [...this.codigoCaptcha];
+    const paso = ancho / (caracteres.length + 1);
+
+    caracteres.forEach((caracter, indice) => {
+      ctx.save();
+      ctx.translate(
+        paso * (indice + 1) + aleatorio(-2, 2),
+        alto / 2 + aleatorio(-4, 4),
+      );
+      ctx.rotate((aleatorio(-18, 18) * Math.PI) / 180);
+      ctx.font = `bold ${Math.round(aleatorio(26, 31))}px "Segoe UI", Arial, sans-serif`;
+      ctx.fillStyle = colores[Math.floor(Math.random() * colores.length)];
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(caracter, 0, 0);
+      ctx.restore();
+    });
+
+    // Marco interior discreto para dar acabado institucional.
+    ctx.strokeStyle = 'rgba(11, 59, 99, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, ancho - 2, alto - 2);
   }
 
   /** Valida captcha y término, y consulta el endpoint público. */

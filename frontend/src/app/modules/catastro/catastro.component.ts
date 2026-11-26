@@ -615,17 +615,39 @@ export class CatastroComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  /** Nombre completo del difunto para ticket, PDF y queryParams. */
+  /**
+   * Nombre completo del difunto para ticket, PDF y queryParams. Evita repetir
+   * los apellidos cuando `nombres` ya los incluye ("FERMINA VELIZ MAMANI").
+   */
   nombreDifunto(nicho: Nicho | null): string {
     if (!nicho) {
       return '';
     }
-    return (
-      [nicho.nombre_difunto, nicho.apellido_difunto]
+
+    const limpiar = (valor?: string | null) =>
+      (valor ?? '').replace(/\s+/g, ' ').trim();
+    const sinTildes = (valor: string) =>
+      valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    const nombres = limpiar(nicho.nombre_difunto) || limpiar(nicho.nombres);
+    const apellidos =
+      [limpiar(nicho.apellido_paterno), limpiar(nicho.apellido_materno)]
         .filter(Boolean)
-        .join(' ')
-        .trim() || 'Sin registro'
-    );
+        .join(' ') || limpiar(nicho.apellido_difunto);
+
+    if (!nombres) {
+      return apellidos || 'Sin registro';
+    }
+    if (!apellidos) {
+      return nombres;
+    }
+
+    const nombresPlano = sinTildes(nombres);
+    const faltantes = apellidos
+      .split(' ')
+      .filter((apellido) => !nombresPlano.includes(sinTildes(apellido)));
+
+    return [nombres, ...faltantes].join(' ').replace(/\s+/g, ' ').trim();
   }
 
   /** Régimen del espacio: perpetuo, plazo en años y año de vencimiento. */
