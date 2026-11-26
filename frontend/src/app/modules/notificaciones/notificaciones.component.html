@@ -1,0 +1,125 @@
+<div class="notificaciones-container">
+    <div class="header">
+        <div>
+            <h3>Centro de Notificaciones</h3>
+            <p>Alertas de vencimiento de contratos, cuentas en mora y control del mantenimiento anual — Gestión {{ anioActual }}</p>
+        </div>
+        <button type="button" class="btn-actualizar" (click)="cargar()" [disabled]="cargando">
+            {{ cargando ? 'Actualizando...' : 'Actualizar alertas' }}
+        </button>
+    </div>
+
+    <div class="aviso-whatsapp" *ngIf="aviso">
+        <span>{{ aviso }}</span>
+        <button type="button" class="btn-cerrar-aviso" (click)="aviso = ''">&times;</button>
+    </div>
+
+    <div class="error-msg" *ngIf="error">{{ error }}</div>
+
+    <!-- Tarjetas resumen -->
+    <div class="resumen-grid">
+        <div class="resumen-card critico">
+            <span class="resumen-etiqueta">En Mora / Vencidos</span>
+            <strong class="resumen-valor">{{ totalCriticos }}</strong>
+            <small>Contratos vencidos o con pago pendiente</small>
+        </div>
+        <div class="resumen-card advertencia">
+            <span class="resumen-etiqueta">Próximos a Vencer</span>
+            <strong class="resumen-valor">{{ totalAdvertencias }}</strong>
+            <small>Vencen este año o el próximo</small>
+        </div>
+        <div class="resumen-card info">
+            <span class="resumen-etiqueta">Perpetuos</span>
+            <strong class="resumen-valor">{{ totalPerpetuos }}</strong>
+            <small>Control de mantenimiento anual</small>
+        </div>
+    </div>
+
+    <!-- Filtros y buscador -->
+    <div class="barra-filtros">
+        <div class="filtros-nivel">
+            <button type="button" [class.activo]="filtro === 'todos'" (click)="cambiarFiltro('todos')">
+                Todos ({{ totalAlertas }})
+            </button>
+            <button type="button" [class.activo]="filtro === 'critico'" (click)="cambiarFiltro('critico')">
+                Críticos / Mora ({{ totalCriticos }})
+            </button>
+            <button type="button" [class.activo]="filtro === 'advertencia'" (click)="cambiarFiltro('advertencia')">
+                Por Vencer ({{ totalAdvertencias }})
+            </button>
+            <button type="button" [class.activo]="filtro === 'info'" (click)="cambiarFiltro('info')">
+                Perpetuos ({{ totalPerpetuos }})
+            </button>
+        </div>
+
+        <div class="buscador">
+            <input type="text" [(ngModel)]="busqueda" name="busqueda"
+                placeholder="Buscar por apellido del difunto o solicitante..." autocomplete="off"
+                aria-label="Buscar alerta">
+            <button type="button" class="btn-limpiar" *ngIf="busqueda || filtro !== 'todos'"
+                (click)="limpiarFiltros()">Limpiar</button>
+        </div>
+    </div>
+
+    <div class="tabla-contenedor">
+        <table class="tabla-alertas">
+            <thead>
+                <tr>
+                    <th>Difunto / Solicitante</th>
+                    <th>Ubicación</th>
+                    <th>Régimen y Vencimiento</th>
+                    <th>Situación</th>
+                    <th>Estado / Nivel</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let alerta of alertasFiltradas">
+                    <td>
+                        <strong>{{ alerta.difunto }}</strong>
+                        <small>{{ alerta.solicitante || 'Sin solicitante registrado' }}</small>
+                        <small *ngIf="alerta.telefono_solicitante">{{ alerta.telefono_solicitante }}</small>
+                    </td>
+                    <td>{{ alerta.ubicacion }}</td>
+                    <td>{{ regimen(alerta) }}</td>
+                    <td class="celda-motivo">{{ alerta.motivo }}</td>
+                    <td>
+                        <span class="badge-estado" [ngClass]="'estado-' + alerta.estado.toLowerCase()">
+                            {{ alerta.estado }}
+                        </span>
+                        <span class="badge-nivel" [ngClass]="'nivel-' + alerta.nivel">
+                            {{ etiquetaNivel(alerta) }}
+                        </span>
+                    </td>
+                    <td class="acciones">
+                        <button type="button" class="btn-accion btn-whatsapp"
+                            (click)="notificarWhatsApp(alerta)"
+                            title="Notificar al familiar por WhatsApp">
+                            Notificar por WhatsApp
+                        </button>
+                        <button type="button" class="btn-accion btn-pdf" (click)="exportarPdf(alerta)"
+                            title="Descargar notificación preventiva en PDF">
+                            Aviso PDF
+                        </button>
+                        <button type="button" class="btn-accion btn-caja" (click)="liquidarEnCaja(alerta)"
+                            title="Abrir la liquidación en el módulo tributario">
+                            Liquidar en Caja
+                        </button>
+                    </td>
+                </tr>
+
+                <tr *ngIf="!cargando && alertasFiltradas.length === 0">
+                    <td colspan="6" class="sin-datos">
+                        {{ alertas.length === 0
+                            ? 'No hay alertas registradas para la gestión actual.'
+                            : 'No se encontraron alertas con ese filtro o búsqueda.' }}
+                    </td>
+                </tr>
+
+                <tr *ngIf="cargando">
+                    <td colspan="6" class="sin-datos">Cargando alertas...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

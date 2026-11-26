@@ -56,6 +56,166 @@
     font-weight: 600;
 }
 
+/* Campana de notificaciones */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notif-wrapper {
+    position: relative;
+}
+
+.btn-campana {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    background: #f8fafc;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-campana:hover,
+.btn-campana.activa {
+    background: #ebf8ff;
+    border-color: #90cdf4;
+    color: #2b6cb0;
+}
+
+.badge-notif {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #dc2626;
+    color: #fff;
+    font-size: 0.68em;
+    font-weight: 800;
+    border: 2px solid #fff;
+    box-sizing: border-box;
+}
+
+.panel-notificaciones {
+    position: absolute;
+    top: 52px;
+    right: 0;
+    width: 340px;
+    max-width: calc(100vw - 40px);
+    background: #fff;
+    border-radius: 10px;
+    border-top: 4px solid #dc2626;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.25);
+    overflow: hidden;
+    z-index: 2000;
+}
+
+.panel-notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #2c3e50;
+    color: #fff;
+}
+
+.panel-notif-header span {
+    font-size: 0.75em;
+    opacity: 0.85;
+}
+
+.panel-notif-estado {
+    padding: 14px;
+    font-size: 0.82em;
+    color: #7f8c8d;
+}
+
+.lista-notif {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.lista-notif li {
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.lista-notif li:hover {
+    background: #f8fafc;
+}
+
+.punto-nivel {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: #94a3b8;
+}
+
+.lista-notif li.nivel-critico .punto-nivel {
+    background: #dc2626;
+}
+
+.lista-notif li.nivel-advertencia .punto-nivel {
+    background: #eab308;
+}
+
+.notif-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.notif-texto strong {
+    font-size: 0.85em;
+    color: #1e293b;
+}
+
+.notif-texto small {
+    font-size: 0.76em;
+    color: #64748b;
+}
+
+.notif-ubicacion {
+    color: #94a3b8 !important;
+}
+
+.ver-todas {
+    display: block;
+    padding: 12px 14px;
+    text-align: center;
+    font-size: 0.82em;
+    font-weight: 700;
+    color: #2b6cb0;
+    text-decoration: none;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.ver-todas:hover {
+    background: #ebf8ff;
+}
+
 /* Estructura del Cuerpo */
 .dashboard-body {
     display: flex;

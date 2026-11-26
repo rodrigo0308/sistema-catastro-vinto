@@ -1,0 +1,344 @@
+.notificaciones-container {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.header p {
+    margin: 5px 0 18px;
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.btn-actualizar {
+    padding: 10px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 700;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.btn-actualizar:hover:not(:disabled) {
+    background: #e2e8f0;
+}
+
+.btn-actualizar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.aviso-whatsapp {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 6px;
+    color: #92400e;
+    font-size: 0.88em;
+}
+
+.btn-cerrar-aviso {
+    border: none;
+    background: transparent;
+    color: #92400e;
+    font-size: 1.3em;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.error-msg {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-bottom: 12px;
+}
+
+/* ---------- Tarjetas resumen ---------- */
+.resumen-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.resumen-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border-left: 5px solid #94a3b8;
+}
+
+.resumen-card.critico {
+    background: #fef2f2;
+    border-left-color: #dc2626;
+}
+
+.resumen-card.advertencia {
+    background: #fefce8;
+    border-left-color: #eab308;
+}
+
+.resumen-card.info {
+    background: #eff6ff;
+    border-left-color: #3b82f6;
+}
+
+.resumen-etiqueta {
+    font-size: 0.78em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+}
+
+.resumen-valor {
+    font-size: 2em;
+    line-height: 1.1;
+    color: #1e293b;
+}
+
+.resumen-card small {
+    color: #64748b;
+    font-size: 0.78em;
+}
+
+/* ---------- Filtros ---------- */
+.barra-filtros {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.filtros-nivel {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.filtros-nivel button {
+    padding: 8px 13px;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    background: #fff;
+    color: #475569;
+    font-size: 0.82em;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.filtros-nivel button:hover {
+    background: #f1f5f9;
+}
+
+.filtros-nivel button.activo {
+    background: #2c3e50;
+    border-color: #2c3e50;
+    color: #fff;
+}
+
+.buscador {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 260px;
+    justify-content: flex-end;
+}
+
+.buscador input {
+    flex: 1;
+    max-width: 380px;
+    padding: 9px 12px;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    font-size: 0.9em;
+    outline: none;
+}
+
+.buscador input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+}
+
+.btn-limpiar {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.82em;
+    cursor: pointer;
+}
+
+/* ---------- Tabla ---------- */
+.tabla-contenedor {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.tabla-alertas {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86em;
+}
+
+.tabla-alertas th {
+    background: #2c3e50;
+    color: #fff;
+    text-align: left;
+    padding: 11px 12px;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.tabla-alertas td {
+    padding: 11px 12px;
+    border-bottom: 1px solid #eef2f6;
+    color: #34495e;
+    vertical-align: top;
+}
+
+.tabla-alertas tbody tr:hover {
+    background: #f4f9fd;
+}
+
+.tabla-alertas small {
+    display: block;
+    margin-top: 3px;
+    color: #7f8c8d;
+    font-size: 0.8em;
+}
+
+.celda-motivo {
+    max-width: 220px;
+}
+
+.badge-estado,
+.badge-nivel {
+    display: inline-block;
+    margin: 0 4px 4px 0;
+    padding: 3px 9px;
+    border-radius: 10px;
+    font-size: 0.76em;
+    font-weight: 700;
+    color: #fff;
+    background: #64748b;
+}
+
+.estado-ocupado {
+    background: #e74c3c;
+}
+
+.estado-mora {
+    background: #b45309;
+}
+
+.estado-libre {
+    background: #27ae60;
+}
+
+.nivel-critico {
+    background: #dc2626;
+}
+
+.nivel-advertencia {
+    background: #eab308;
+    color: #1e293b;
+}
+
+.nivel-info {
+    background: #3b82f6;
+}
+
+.acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 170px;
+}
+
+.btn-accion {
+    padding: 7px 10px;
+    border: none;
+    border-radius: 5px;
+    font-size: 0.8em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-whatsapp {
+    background: #22c55e;
+    color: #fff;
+}
+
+.btn-whatsapp:hover {
+    background: #16a34a;
+}
+
+.btn-pdf {
+    background: #0284c7;
+    color: #fff;
+}
+
+.btn-pdf:hover {
+    background: #0369a1;
+}
+
+.btn-caja {
+    background: #334155;
+    color: #fff;
+}
+
+.btn-caja:hover {
+    background: #1e293b;
+}
+
+.sin-datos {
+    text-align: center;
+    color: #7f8c8d;
+    padding: 24px;
+    font-size: 0.9em;
+}
+
+@media (max-width: 860px) {
+    .resumen-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .buscador {
+        justify-content: flex-start;
+    }
+
+    .buscador input {
+        max-width: none;
+    }
+}
